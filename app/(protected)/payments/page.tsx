@@ -49,14 +49,17 @@ export default function PaymentsPage() {
   const fetchPayments = async (statusFilter?: string) => {
     try {
       setIsLoading(true);
-      const response = await api.get<PaymentsResponse>('/payments', {
-        params: { limit: 100, status: statusFilter }
-      });
+      setError(null);
+      const params: Record<string, unknown> = { limit: 100 };
+      if (statusFilter) {
+        params.status = statusFilter;
+      }
+      const response = await api.get<PaymentsResponse>('/payments', { params });
       setPayments(response.data.data);
       setTotal(response.data.total);
     } catch (e) {
       console.error(e);
-      setError('Não foi possível carregar os pagamentos.');
+      setError('Nao foi possivel carregar os pagamentos.');
     } finally {
       setIsLoading(false);
     }

@@ -59,14 +59,17 @@ export default function AppointmentsPage() {
   const fetchAppointments = async (statusFilter?: string) => {
     try {
       setIsLoading(true);
-      const response = await api.get<AppointmentsResponse>('/appointments', {
-        params: { limit: 100, status: statusFilter }
-      });
+      setError(null);
+      const params: Record<string, unknown> = { limit: 100 };
+      if (statusFilter) {
+        params.status = statusFilter;
+      }
+      const response = await api.get<AppointmentsResponse>('/appointments', { params });
       setAppointments(response.data.data);
       setTotal(response.data.total);
     } catch (e) {
       console.error(e);
-      setError('Não foi possível carregar os agendamentos.');
+      setError('Nao foi possivel carregar os agendamentos.');
     } finally {
       setIsLoading(false);
     }
@@ -416,3 +419,4 @@ export default function AppointmentsPage() {
     </div>
   );
 }
+
