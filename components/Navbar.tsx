@@ -25,7 +25,7 @@ export const Navbar = () => {
     <header className="sticky top-0 z-40 bg-white shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-8">
-          <span className="text-lg font-semibold text-primary">Clínica Yance CRM</span>
+          <span className="text-lg font-semibold text-primary">Clínica Yance</span>
 
           <nav className="hidden gap-4 text-sm text-gray-600 md:flex">
             {links.map((link) => (
