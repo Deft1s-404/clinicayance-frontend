@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import api from '../../../lib/api';
 
@@ -122,6 +123,8 @@ export default function IntegrationsPage() {
   const [evolutionInstanceNameInput, setEvolutionInstanceNameInput] = useState('');
   const [evolutionCreateError, setEvolutionCreateError] = useState<string | null>(null);
   const [evolutionRemovingInstanceId, setEvolutionRemovingInstanceId] = useState<string | null>(null);
+  const [evolutionInstancePendingRemoval, setEvolutionInstancePendingRemoval] =
+    useState<EvolutionSession | null>(null);
   const [evolutionError, setEvolutionError] = useState<string | null>(null);
   const [evolutionModalError, setEvolutionModalError] = useState<string | null>(null);
   const [evolutionPhoneInput, setEvolutionPhoneInput] = useState('');
@@ -181,6 +184,10 @@ export default function IntegrationsPage() {
 
   const statusParam = searchParams.get('status');
   const messageParam = searchParams.get('message');
+
+  const requestEvolutionRemoveInstance = useCallback((instance: EvolutionSession) => {
+    setEvolutionInstancePendingRemoval(instance);
+  }, []);
 
   const loadGoogleStatus = useCallback(async () => {
     setGoogleStatusLoading(true);
@@ -590,15 +597,6 @@ export default function IntegrationsPage() {
         return;
       }
 
-      if (typeof window !== 'undefined') {
-        const confirmed = window.confirm(
-          `Remover a instancia ${instance.name ?? instanceId}? Essa acao nao podera ser desfeita.`
-        );
-        if (!confirmed) {
-          return;
-        }
-      }
-
       setEvolutionError(null);
       setEvolutionModalError(null);
       setEvolutionPhoneInput('');
@@ -617,10 +615,25 @@ export default function IntegrationsPage() {
         setEvolutionError('Nao foi possivel remover a instancia Evolution.');
       } finally {
         setEvolutionRemovingInstanceId(null);
+        setEvolutionInstancePendingRemoval(null);
       }
     },
     [loadEvolutionStatus]
   );
+
+  const confirmEvolutionRemoveInstance = useCallback(async () => {
+    if (!evolutionInstancePendingRemoval) {
+      return;
+    }
+    await handleEvolutionRemoveInstance(evolutionInstancePendingRemoval);
+  }, [evolutionInstancePendingRemoval, handleEvolutionRemoveInstance]);
+
+  const cancelEvolutionRemoveInstance = useCallback(() => {
+    if (evolutionRemovingInstanceId) {
+      return;
+    }
+    setEvolutionInstancePendingRemoval(null);
+  }, [evolutionRemovingInstanceId]);
 
   const handleRefreshEvolutionQr = useCallback(async () => {
     if (!evolutionSession?.instanceId) {
@@ -1063,7 +1076,7 @@ export default function IntegrationsPage() {
                       Detalhes
                     </button>
                     <button
-                      onClick={() => handleEvolutionRemoveInstance(instance)}
+                      onClick={() => requestEvolutionRemoveInstance(instance)}
                       disabled={
                         evolutionRemovingInstanceId === instance.instanceId || isEvolutionCreatingInstance
                       }
@@ -1289,6 +1302,31 @@ export default function IntegrationsPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={evolutionInstancePendingRemoval !== null}
+        title="Remover instancia"
+        description={
+          evolutionInstancePendingRemoval ? (
+            <p>
+              Deseja realmente remover a instancia{' '}
+              <span className="font-semibold text-slate-900">
+                {evolutionInstancePendingRemoval.name ?? evolutionInstancePendingRemoval.instanceId}
+              </span>
+              ? Essa acao nao pode ser desfeita.
+            </p>
+          ) : null
+        }
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        tone="danger"
+        isConfirmLoading={
+          evolutionRemovingInstanceId !== null &&
+          evolutionRemovingInstanceId === evolutionInstancePendingRemoval?.instanceId
+        }
+        onCancel={cancelEvolutionRemoveInstance}
+        onConfirm={confirmEvolutionRemoveInstance}
+      />
     </div>
   );
 }

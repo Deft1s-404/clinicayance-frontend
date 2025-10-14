@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
@@ -35,13 +36,18 @@ export default function LeadsPage() {
     stage: 'NEW'
   });
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [leadPendingDeletion, setLeadPendingDeletion] = useState<Lead | null>(null);
+  const [isDeletingLead, setIsDeletingLead] = useState(false);
 
   const fetchLeads = async (stageFilter?: string) => {
     try {
       setIsLoading(true);
-      const response = await api.get<LeadsResponse>('/leads', {
-        params: { limit: 100, stage: stageFilter }
-      });
+      setError(null);
+      const params: Record<string, unknown> = { limit: 100 };
+      if (stageFilter) {
+        params.stage = stageFilter;
+      }
+      const response = await api.get<LeadsResponse>('/leads', { params });
       setLeads(response.data.data);
       setTotal(response.data.total);
     } catch (e) {
@@ -90,6 +96,7 @@ export default function LeadsPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
+      setError(null);
       if (editingLeadId) {
         await api.patch(`/leads/${editingLeadId}`, formState);
       } else {
@@ -103,17 +110,33 @@ export default function LeadsPage() {
     }
   };
 
-  const handleDelete = async (leadId: string) => {
-    if (!window.confirm('Deseja realmente excluir esse lead?')) {
+  const requestDeleteLead = (lead: Lead) => {
+    setLeadPendingDeletion(lead);
+  };
+
+  const handleConfirmDeleteLead = async () => {
+    if (!leadPendingDeletion) {
       return;
     }
     try {
-      await api.delete(`/leads/${leadId}`);
+      setIsDeletingLead(true);
+      setError(null);
+      await api.delete(`/leads/${leadPendingDeletion.id}`);
+      setLeadPendingDeletion(null);
       await fetchLeads(selectedStage);
     } catch (e) {
       console.error(e);
       setError('Erro ao remover lead.');
+    } finally {
+      setIsDeletingLead(false);
     }
+  };
+
+  const handleCancelDeleteLead = () => {
+    if (isDeletingLead) {
+      return;
+    }
+    setLeadPendingDeletion(null);
   };
 
   return (
@@ -200,7 +223,7 @@ export default function LeadsPage() {
                         Atualizar
                       </button>
                       <button
-                        onClick={() => handleDelete(lead.id)}
+                        onClick={() => requestDeleteLead(lead)}
                         className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-500 transition hover:bg-red-50"
                       >
                         Remover
@@ -285,6 +308,26 @@ export default function LeadsPage() {
           </button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={leadPendingDeletion !== null}
+        title="Remover lead"
+        description={
+          leadPendingDeletion ? (
+            <p>
+              Deseja realmente remover{' '}
+              <span className="font-semibold text-slate-900">{leadPendingDeletion.client?.name ?? 'este lead'}</span>?
+              Essa acao nao pode ser desfeita.
+            </p>
+          ) : null
+        }
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        tone="danger"
+        isConfirmLoading={isDeletingLead}
+        onCancel={handleCancelDeleteLead}
+        onConfirm={handleConfirmDeleteLead}
+      />
     </div>
   );
 }

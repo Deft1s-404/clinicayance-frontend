@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
@@ -19,6 +20,12 @@ interface ClientsResponse {
 }
 
 const statusOptions: AppointmentStatusOption[] = ['BOOKED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+const statusLabels: Record<AppointmentStatusOption, string> = {
+  BOOKED: 'Agendada',
+  COMPLETED: 'Concluida',
+  CANCELLED: 'Cancelada',
+  NO_SHOW: 'Nao compareceu'
+};
 
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString('pt-BR', {
@@ -31,6 +38,8 @@ const formatDateTime = (value: string) =>
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientSearch, setClientSearch] = useState('');
+  const [isClientsLoading, setIsClientsLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +53,8 @@ export default function AppointmentsPage() {
     end: '',
     status: 'BOOKED'
   });
+  const [appointmentPendingDeletion, setAppointmentPendingDeletion] = useState<Appointment | null>(null);
+  const [isDeletingAppointment, setIsDeletingAppointment] = useState(false);
 
   const fetchAppointments = async (statusFilter?: string) => {
     try {
@@ -61,12 +72,17 @@ export default function AppointmentsPage() {
     }
   };
 
-  const fetchClients = async () => {
+  const fetchClients = async (searchTerm?: string) => {
     try {
-      const response = await api.get<ClientsResponse>('/clients', { params: { limit: 100 } });
+      setIsClientsLoading(true);
+      const response = await api.get<ClientsResponse>('/clients', {
+        params: { limit: 50, search: searchTerm || undefined }
+      });
       setClients(response.data.data);
     } catch (e) {
       console.error('Erro ao buscar clientes', e);
+    } finally {
+      setIsClientsLoading(false);
     }
   };
 
@@ -95,6 +111,7 @@ export default function AppointmentsPage() {
         status: 'BOOKED'
       });
     }
+    void fetchClients(clientSearch.trim() || undefined);
     setIsModalOpen(true);
   };
 
@@ -120,17 +137,36 @@ export default function AppointmentsPage() {
     }
   };
 
-  const handleDelete = async (appointmentId: string) => {
-    if (!window.confirm('Deseja realmente excluir esta consulta?')) {
+  const requestDeleteAppointment = (appointment: Appointment) => {
+    setAppointmentPendingDeletion(appointment);
+  };
+
+  const handleConfirmDeleteAppointment = async () => {
+    if (!appointmentPendingDeletion) {
       return;
     }
     try {
-      await api.delete(`/appointments/${appointmentId}`);
+      setIsDeletingAppointment(true);
+      await api.delete(`/appointments/${appointmentPendingDeletion.id}`);
+      setAppointmentPendingDeletion(null);
       await fetchAppointments(selectedStatus);
     } catch (e) {
       console.error(e);
       setError('Erro ao remover consulta.');
+    } finally {
+      setIsDeletingAppointment(false);
     }
+  };
+
+  const handleCancelDeleteAppointment = () => {
+    if (isDeletingAppointment) {
+      return;
+    }
+    setAppointmentPendingDeletion(null);
+  };
+
+  const handleClientSearch = async () => {
+    await fetchClients(clientSearch.trim() || undefined);
   };
 
   return (
@@ -219,7 +255,7 @@ export default function AppointmentsPage() {
                         Atualizar
                       </button>
                       <button
-                        onClick={() => handleDelete(appointment.id)}
+                        onClick={() => requestDeleteAppointment(appointment)}
                         className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-500 transition hover:bg-red-50"
                       >
                         Remover
@@ -241,24 +277,58 @@ export default function AppointmentsPage() {
         onClose={() => setIsModalOpen(false)}
       >
         <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-          <label className="text-sm">
-            Cliente
-            <select
-              required
-              value={formState.clientId}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, clientId: event.target.value }))
-              }
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
-            >
-              <option value="">Selecione um cliente</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="md:col-span-2 space-y-2 text-sm">
+            <label className="block">
+              Buscar cliente
+              <div className="mt-1 flex gap-2">
+                <input
+                  type="search"
+                  value={clientSearch}
+                  onChange={(event) => setClientSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleClientSearch();
+                    }
+                  }}
+                  placeholder="Digite o nome do cliente"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleClientSearch}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
+                >
+                  Buscar
+                </button>
+              </div>
+            </label>
+
+            <label className="block">
+              Cliente
+              <select
+                required
+                value={formState.clientId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, clientId: event.target.value }))
+                }
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+              >
+                <option value="">Selecione um cliente</option>
+                {isClientsLoading ? (
+                  <option disabled>Carregando clientes...</option>
+                ) : clients.length === 0 ? (
+                  <option disabled>Nenhum cliente encontrado</option>
+                ) : (
+                  clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+          </div>
 
           <label className="text-sm">
             Procedimento
@@ -307,7 +377,7 @@ export default function AppointmentsPage() {
             >
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {statusLabels[status]}
                 </option>
               ))}
             </select>
@@ -323,6 +393,26 @@ export default function AppointmentsPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={appointmentPendingDeletion !== null}
+        title="Remover consulta"
+        description={
+          appointmentPendingDeletion ? (
+            <p>
+              Deseja realmente remover a consulta de{' '}
+              <span className="font-semibold text-slate-900">{appointmentPendingDeletion.client.name}</span>?
+              Essa acao nao pode ser desfeita.
+            </p>
+          ) : null
+        }
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        tone="danger"
+        isConfirmLoading={isDeletingAppointment}
+        onCancel={handleCancelDeleteAppointment}
+        onConfirm={handleConfirmDeleteAppointment}
+      />
     </div>
   );
 }

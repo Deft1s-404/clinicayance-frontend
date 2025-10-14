@@ -13,3 +13,14 @@ body {
 a {
   @apply text-primary hover:text-primary-dark transition-colors;
 }
+
+@layer base {
+  select {
+    @apply font-sans;
+  }
+
+  select option {
+    @apply font-sans;
+  }
+}
+

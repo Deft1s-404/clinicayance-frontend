@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
@@ -76,6 +77,8 @@ export default function ClientsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState<ClientFormState>({ ...emptyForm });
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [clientPendingDeletion, setClientPendingDeletion] = useState<Client | null>(null);
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
   const latestRequestRef = useRef(0);
   const hasFetchedInitial = useRef(false);
   const isSearchDirty = search !== lastFetchedSearch;
@@ -280,17 +283,32 @@ export default function ClientsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Deseja realmente remover este cliente?')) {
+  const requestDeleteClient = (client: Client) => {
+    setClientPendingDeletion(client);
+  };
+
+  const handleConfirmDeleteClient = async () => {
+    if (!clientPendingDeletion) {
       return;
     }
     try {
-      await api.delete(`/clients/${id}`);
+      setIsDeletingClient(true);
+      await api.delete(`/clients/${clientPendingDeletion.id}`);
+      setClientPendingDeletion(null);
       await fetchClients({ page: currentPage, searchTerm: lastFetchedSearch });
     } catch (e) {
       console.error(e);
       setError('Erro ao remover cliente.');
+    } finally {
+      setIsDeletingClient(false);
     }
+  };
+
+  const handleCancelDeleteClient = () => {
+    if (isDeletingClient) {
+      return;
+    }
+    setClientPendingDeletion(null);
   };
 
   return (
@@ -392,7 +410,7 @@ export default function ClientsPage() {
                         Editar
                       </button>
                       <button
-                        onClick={() => handleDelete(client.id)}
+                        onClick={() => requestDeleteClient(client)}
                         className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-500 transition hover:bg-red-50"
                       >
                         Remover
@@ -616,6 +634,26 @@ export default function ClientsPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={clientPendingDeletion !== null}
+        title="Remover cliente"
+        description={
+          clientPendingDeletion ? (
+            <p>
+              Deseja realmente remover{' '}
+              <span className="font-semibold text-slate-900">{clientPendingDeletion.name}</span>? Essa acao nao pode ser
+              desfeita.
+            </p>
+          ) : null
+        }
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        tone="danger"
+        isConfirmLoading={isDeletingClient}
+        onCancel={handleCancelDeleteClient}
+        onConfirm={handleConfirmDeleteClient}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
@@ -36,6 +37,9 @@ export default function CampaignsPage() {
     status: 'DRAFT',
     scheduledAt: ''
   });
+  const [campaignPendingDeletion, setCampaignPendingDeletion] =
+    useState<(Campaign & { logs: CampaignLog[] }) | null>(null);
+  const [isDeletingCampaign, setIsDeletingCampaign] = useState(false);
 
   const fetchCampaigns = async () => {
     try {
@@ -109,17 +113,32 @@ export default function CampaignsPage() {
     }
   };
 
-  const handleDelete = async (campaignId: string) => {
-    if (!window.confirm('Deseja realmente excluir esta campanha?')) {
+  const requestDeleteCampaign = (campaign: Campaign & { logs: CampaignLog[] }) => {
+    setCampaignPendingDeletion(campaign);
+  };
+
+  const handleConfirmDeleteCampaign = async () => {
+    if (!campaignPendingDeletion) {
       return;
     }
     try {
-      await api.delete(`/campaigns/${campaignId}`);
+      setIsDeletingCampaign(true);
+      await api.delete(`/campaigns/${campaignPendingDeletion.id}`);
+      setCampaignPendingDeletion(null);
       await fetchCampaigns();
     } catch (e) {
       console.error(e);
       setError('Erro ao remover campanha.');
+    } finally {
+      setIsDeletingCampaign(false);
     }
+  };
+
+  const handleCancelDeleteCampaign = () => {
+    if (isDeletingCampaign) {
+      return;
+    }
+    setCampaignPendingDeletion(null);
   };
 
   return (
@@ -189,7 +208,7 @@ export default function CampaignsPage() {
                     Editar
                   </button>
                   <button
-                    onClick={() => handleDelete(campaign.id)}
+                    onClick={() => requestDeleteCampaign(campaign)}
                     className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
                   >
                     Remover
@@ -304,6 +323,26 @@ export default function CampaignsPage() {
           </button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={campaignPendingDeletion !== null}
+        title="Remover campanha"
+        description={
+          campaignPendingDeletion ? (
+            <p>
+              Deseja realmente remover a campanha{' '}
+              <span className="font-semibold text-slate-900">{campaignPendingDeletion.name}</span>? Essa acao nao pode
+              ser desfeita.
+            </p>
+          ) : null
+        }
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        tone="danger"
+        isConfirmLoading={isDeletingCampaign}
+        onCancel={handleCancelDeleteCampaign}
+        onConfirm={handleConfirmDeleteCampaign}
+      />
     </div>
   );
 }

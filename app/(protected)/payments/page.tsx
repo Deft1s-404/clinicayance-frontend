@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
@@ -42,6 +43,8 @@ export default function PaymentsPage() {
     pixTxid: '',
     comprovanteUrl: ''
   });
+  const [paymentPendingDeletion, setPaymentPendingDeletion] = useState<Payment | null>(null);
+  const [isDeletingPayment, setIsDeletingPayment] = useState(false);
 
   const fetchPayments = async (statusFilter?: string) => {
     try {
@@ -121,17 +124,32 @@ export default function PaymentsPage() {
     }
   };
 
-  const handleDelete = async (paymentId: string) => {
-    if (!window.confirm('Deseja realmente excluir este pagamento?')) {
+  const requestDeletePayment = (payment: Payment) => {
+    setPaymentPendingDeletion(payment);
+  };
+
+  const handleConfirmDeletePayment = async () => {
+    if (!paymentPendingDeletion) {
       return;
     }
     try {
-      await api.delete(`/payments/${paymentId}`);
+      setIsDeletingPayment(true);
+      await api.delete(`/payments/${paymentPendingDeletion.id}`);
+      setPaymentPendingDeletion(null);
       await fetchPayments(selectedStatus);
     } catch (e) {
       console.error(e);
       setError('Erro ao remover pagamento.');
+    } finally {
+      setIsDeletingPayment(false);
     }
+  };
+
+  const handleCancelDeletePayment = () => {
+    if (isDeletingPayment) {
+      return;
+    }
+    setPaymentPendingDeletion(null);
   };
 
   const handleConfirm = async (paymentId: string) => {
@@ -240,7 +258,7 @@ export default function PaymentsPage() {
                         Editar
                       </button>
                       <button
-                        onClick={() => handleDelete(payment.id)}
+                        onClick={() => requestDeletePayment(payment)}
                         className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-500 transition hover:bg-red-50"
                       >
                         Remover
@@ -353,6 +371,28 @@ export default function PaymentsPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={paymentPendingDeletion !== null}
+        title="Remover pagamento"
+        description={
+          paymentPendingDeletion ? (
+            <p>
+              Deseja realmente remover o pagamento de{' '}
+              <span className="font-semibold text-slate-900">
+                {paymentPendingDeletion.appointment.client.name}
+              </span>{' '}
+              no valor de {formatCurrency(paymentPendingDeletion.value)}? Essa acao nao pode ser desfeita.
+            </p>
+          ) : null
+        }
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        tone="danger"
+        isConfirmLoading={isDeletingPayment}
+        onCancel={handleCancelDeletePayment}
+        onConfirm={handleConfirmDeletePayment}
+      />
     </div>
   );
 }
