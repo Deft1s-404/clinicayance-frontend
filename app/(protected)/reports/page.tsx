@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -30,35 +30,43 @@ export default function ReportsPage() {
   const [filters, setFilters] = useState<RevenueFilters>({
     period: 'day'
   });
+  const filtersRef = useRef(filters);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchReports = async (customFilters = filters) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [funnelRes, revenueRes, appointmentsRes] = await Promise.all([
-        api.get<FunnelReport>('/reports/funnel'),
-        api.get<RevenueReport>('/reports/revenue', { params: customFilters }),
-        api.get<AppointmentsReport>('/reports/appointments', {
-          params: { start: customFilters.start, end: customFilters.end }
-        })
-      ]);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
-      setFunnelReport(funnelRes.data);
-      setRevenueReport(revenueRes.data);
-      setAppointmentsReport(appointmentsRes.data);
-    } catch (e) {
-      console.error(e);
-      setError('Não foi possível carregar os relatórios.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchReports = useCallback(
+    async (customFilters: RevenueFilters = filtersRef.current) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [funnelRes, revenueRes, appointmentsRes] = await Promise.all([
+          api.get<FunnelReport>('/reports/funnel'),
+          api.get<RevenueReport>('/reports/revenue', { params: customFilters }),
+          api.get<AppointmentsReport>('/reports/appointments', {
+            params: { start: customFilters.start, end: customFilters.end }
+          })
+        ]);
+
+        setFunnelReport(funnelRes.data);
+        setRevenueReport(revenueRes.data);
+        setAppointmentsReport(appointmentsRes.data);
+      } catch (e) {
+        console.error(e);
+        setError('Não foi possível carregar os relatórios.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    fetchReports();
-  }, []);
+    void fetchReports();
+  }, [fetchReports]);
 
   const handleFilterChange = (key: keyof RevenueFilters, value: string) => {
     const newFilters = {
@@ -66,6 +74,7 @@ export default function ReportsPage() {
       [key]: value || undefined
     } as RevenueFilters;
     setFilters(newFilters);
+    filtersRef.current = newFilters;
   };
 
   const totalRevenue = revenueReport?.total ?? 0;
@@ -217,3 +226,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+

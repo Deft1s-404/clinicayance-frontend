@@ -953,7 +953,7 @@ export default function IntegrationsPage() {
               </span>
             )}
             <button
-              onClick={handleEvolutionConnect}
+              onClick={() => void handleEvolutionConnect()}
               disabled={
                 isEvolutionActionLoading ||
                 !evolutionSession ||
@@ -1293,7 +1293,7 @@ export default function IntegrationsPage() {
           <div className="space-y-3 text-sm text-gray-600">
             <p>{'Nenhum numero conectado no momento. Clique em "Conectar WhatsApp" para gerar um QR.'}</p>
             <button
-              onClick={handleEvolutionConnect}
+              onClick={() => void handleEvolutionConnect()}
               disabled={isEvolutionActionLoading}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-300"
             >
