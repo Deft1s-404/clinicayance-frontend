@@ -1,8 +1,13 @@
-﻿"use client";
+'use client';
 
-import { FormEvent, useState } from 'react';
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
-type YesNo = 'Sim' | 'Nao';
+import api from "../../../../../lib/api";
+import { Client } from "../../../../../types";
+
+type YesNo = "Sim" | "Nao";
 
 interface ClientForm {
   name: string;
@@ -24,86 +29,203 @@ interface ClientForm {
   medicalAdditional: Record<string, string>;
 }
 
-const yesNoOptions: YesNo[] = ['Sim', 'Nao'];
+const yesNoOptions: YesNo[] = ["Sim", "Nao"];
+const howDidYouKnowOptions = ["Instagram", "Facebook", "Outros"];
 
 const initialHabitsQuestions: Record<string, YesNo> = {
-  'Ja realizou tratamento estetico anteriormente?': 'Nao',
-  'Usa cosmeticos diariamente?': 'Nao',
-  'Usa protetor solar diariamente?': 'Nao',
-  'Esta exposta ao sol?': 'Nao',
-  'Consome bebidas alcoolicas ou fuma?': 'Nao',
-  'Realiza atividade fisica?': 'Nao',
-  'Usa anticoncepcionais?': 'Nao',
-  'Esta gravida ou amamentando?': 'Nao',
-  'Tem filhos?': 'Nao',
-  'Esta sob tratamento medico?': 'Nao',
-  'Toma medicamentos ou anticoagulantes?': 'Nao',
-  'Tem alergias?': 'Nao'
+  "Ja realizou tratamento estetico anteriormente?": "Nao",
+  "Usa cosmeticos diariamente?": "Nao",
+  "Usa protetor solar diariamente?": "Nao",
+  "Esta exposta ao sol?": "Nao",
+  "Consome bebidas alcoolicas ou fuma?": "Nao",
+  "Realiza atividade fisica?": "Nao",
+  "Usa anticoncepcionais?": "Nao",
+  "Esta gravida ou amamentando?": "Nao",
+  "Tem filhos?": "Nao",
+  "Esta sob tratamento medico?": "Nao",
+  "Toma medicamentos ou anticoagulantes?": "Nao",
+  "Tem alergias?": "Nao"
 };
 
 const initialHabitsAdditional: Record<string, string> = {
-  'Passa mais tempo em pe ou sentada?': ''
+  "Passa mais tempo em pe ou sentada?": ""
 };
 
 const initialMedicalQuestions: Record<string, YesNo> = {
-  'Reacao alergica a anestesicos?': 'Nao',
-  'Usa marcapasso?': 'Nao',
-  'Alteracoes cardiacas?': 'Nao',
-  'Epilepsia ou convulsoes?': 'Nao',
-  'Alteracoes psicologicas ou psiquiatricas?': 'Nao',
-  'Pessoa estressada?': 'Nao',
-  'Hipo/hipertensao?': 'Nao',
-  'Diabetes?': 'Nao',
-  'Transtorno circulatorio?': 'Nao',
-  'Transtorno renal?': 'Nao',
-  'Transtorno hormonal?': 'Nao',
-  'Transtorno gastrointestinal?': 'Nao',
-  'Antecedente oncologico?': 'Nao',
-  'Doenca autoimune?': 'Nao',
-  'Herpes?': 'Nao',
-  'Portador(a) de HIV?': 'Nao',
-  'Protese metalica ou implante dental?': 'Nao',
-  'Cirurgia plastica ou reparadora?': 'Nao',
-  'Uso de PMMA (preenchimento)?': 'Nao'
+  "Reacao alergica a anestesicos?": "Nao",
+  "Usa marcapasso?": "Nao",
+  "Alteracoes cardiacas?": "Nao",
+  "Epilepsia ou convulsoes?": "Nao",
+  "Alteracoes psicologicas ou psiquiatricas?": "Nao",
+  "Pessoa estressada?": "Nao",
+  "Hipo/hipertensao?": "Nao",
+  "Diabetes?": "Nao",
+  "Transtorno circulatorio?": "Nao",
+  "Transtorno renal?": "Nao",
+  "Transtorno hormonal?": "Nao",
+  "Transtorno gastrointestinal?": "Nao",
+  "Antecedente oncologico?": "Nao",
+  "Doenca autoimune?": "Nao",
+  "Herpes?": "Nao",
+  "Portador(a) de HIV?": "Nao",
+  "Protese metalica ou implante dental?": "Nao",
+  "Cirurgia plastica ou reparadora?": "Nao",
+  "Uso de PMMA (preenchimento)?": "Nao"
 };
 
 const initialMedicalAdditional: Record<string, string> = {
-  'Hipo/hipertensao? Usa medicacao?': '',
-  'Diabetes (Tipo)': '',
-  'Uso de PMMA (Zona)': ''
+  "Hipo/hipertensao? Usa medicacao?": "",
+  "Diabetes (Tipo)": "",
+  "Uso de PMMA (Zona)": ""
 };
 
-const howDidYouKnowOptions = ['Instagram', 'Facebook', 'Outros'];
-
-const initialForm: ClientForm = {
-  name: '',
-  email: '',
-  contact: '',
-  age: '',
-  country: '',
-  birthDate: '',
-  language: '',
+const emptyForm: ClientForm = {
+  name: "",
+  email: "",
+  contact: "",
+  age: "",
+  country: "",
+  birthDate: "",
+  language: "",
   howDidYouKnow: howDidYouKnowOptions[0],
-  referredBy: '',
-  selfEsteem: '5',
+  referredBy: "",
+  selfEsteem: "5",
   consent: false,
-  formDate: '',
-  signature: '',
+  formDate: "",
+  signature: "",
   habits: { ...initialHabitsQuestions },
   habitsAdditional: { ...initialHabitsAdditional },
   medical: { ...initialMedicalQuestions },
   medicalAdditional: { ...initialMedicalAdditional }
 };
 
-const API_ENDPOINT =
-  typeof window !== 'undefined'
-    ? ((process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api') + '/integrations/forms/google')
-    : '/api/integrations/forms/google';
+const normalizeKey = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 
-export default function AnamnesisPage() {
-  const [form, setForm] = useState<ClientForm>(initialForm);
+const toYesNo = (value: unknown): YesNo => {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return normalized.startsWith("s") ? "Sim" : "Nao";
+};
+
+const buildPayloadFromForm = (state: ClientForm) => {
+  const responses: Record<string, unknown> = {
+    "Como nos conheceu?": state.howDidYouKnow,
+    "Recomendacao de": state.referredBy,
+    "Autoestima (0-10)": state.selfEsteem
+  };
+
+  Object.entries(state.habits).forEach(([question, answer]) => {
+    responses[question] = answer;
+  });
+
+  Object.entries(state.habitsAdditional).forEach(([question, answer]) => {
+    if (answer) {
+      responses[question] = answer;
+    }
+  });
+
+  Object.entries(state.medical).forEach(([question, answer]) => {
+    responses[question] = answer;
+  });
+
+  Object.entries(state.medicalAdditional).forEach(([question, answer]) => {
+    if (answer) {
+      responses[question] = answer;
+    }
+  });
+
+  responses["Data do preenchimento"] = state.formDate;
+  responses["Assinatura"] = state.signature;
+  responses["Concordancia com uso de dados"] = state.consent ? "Sim" : "Nao";
+
+  return responses;
+};
+
+const HABITS_KEYS = Object.keys(initialHabitsQuestions);
+const HABITS_ADDITIONAL_KEYS = Object.keys(initialHabitsAdditional);
+const MEDICAL_KEYS = Object.keys(initialMedicalQuestions);
+const MEDICAL_ADDITIONAL_KEYS = Object.keys(initialMedicalAdditional);
+
+export default function ClientAnamnesisEditorPage() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const [client, setClient] = useState<Client | null>(null);
+  const [form, setForm] = useState<ClientForm>(emptyForm);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
+    null
+  );
+
+  useEffect(() => {
+    const id = params?.id;
+    if (!id) return;
+
+    const loadClient = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get<Client>(`/clients/${id}`);
+        const data = response.data;
+        setClient(data);
+
+        const responses = new Map<string, unknown>(
+          Object.entries((data.anamnesisResponses as Record<string, unknown>) ?? {}).map(
+            ([key, value]) => [normalizeKey(key), value]
+          )
+        );
+
+        setForm({
+          name: data.name ?? "",
+          email: data.email ?? "",
+          contact: data.phone ?? "",
+          age:
+            data.age !== null && data.age !== undefined
+              ? String(data.age)
+              : "",
+          country: data.country ?? "",
+          birthDate: data.birthDate ? data.birthDate.slice(0, 10) : "",
+          language: data.language ?? "",
+          howDidYouKnow:
+            String(responses.get(normalizeKey("Como nos conheceu?")) ?? howDidYouKnowOptions[0]),
+          referredBy: String(responses.get(normalizeKey("Recomendacao de")) ?? ""),
+          selfEsteem: String(responses.get(normalizeKey("Autoestima (0-10)")) ?? "5"),
+          consent: String(responses.get(normalizeKey("Concordancia com uso de dados")) ?? "")
+            .toLowerCase()
+            .startsWith("s"),
+          formDate: String(responses.get(normalizeKey("Data do preenchimento")) ?? ""),
+          signature: String(responses.get(normalizeKey("Assinatura")) ?? ""),
+          habits: HABITS_KEYS.reduce((acc, key) => {
+            acc[key] = toYesNo(responses.get(normalizeKey(key)));
+            return acc;
+          }, { ...initialHabitsQuestions } as Record<string, YesNo>),
+          habitsAdditional: HABITS_ADDITIONAL_KEYS.reduce((acc, key) => {
+            acc[key] = String(responses.get(normalizeKey(key)) ?? "");
+            return acc;
+          }, { ...initialHabitsAdditional }),
+          medical: MEDICAL_KEYS.reduce((acc, key) => {
+            acc[key] = toYesNo(responses.get(normalizeKey(key)));
+            return acc;
+          }, { ...initialMedicalQuestions } as Record<string, YesNo>),
+          medicalAdditional: MEDICAL_ADDITIONAL_KEYS.reduce((acc, key) => {
+            acc[key] = String(responses.get(normalizeKey(key)) ?? "");
+            return acc;
+          }, { ...initialMedicalAdditional })
+        });
+      } catch (error) {
+        console.error(error);
+        setFeedback({ type: "error", message: "Nao foi possivel carregar a ficha deste cliente." });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadClient();
+  }, [params?.id]);
 
   const updateField = (key: keyof ClientForm, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -133,49 +255,15 @@ export default function AnamnesisPage() {
     }));
   };
 
-  const buildAnamnesisPayload = (state: ClientForm) => {
-    const responses: Record<string, unknown> = {
-      'Como nos conheceu?': state.howDidYouKnow,
-      'Recomendacao de': state.referredBy,
-      'Autoestima (0-10)': state.selfEsteem
-    };
-
-    Object.entries(state.habits).forEach(([question, answer]) => {
-      responses[question] = answer;
-    });
-
-    Object.entries(state.habitsAdditional).forEach(([question, answer]) => {
-      if (answer) {
-        responses[question] = answer;
-      }
-    });
-
-    Object.entries(state.medical).forEach(([question, answer]) => {
-      responses[question] = answer;
-    });
-
-    Object.entries(state.medicalAdditional).forEach(([question, answer]) => {
-      if (answer) {
-        responses[question] = answer;
-      }
-    });
-
-    responses['Data do preenchimento'] = form.formDate;
-    responses['Assinatura'] = form.signature;
-    responses['Concordancia com uso de dados'] = form.consent ? 'Sim' : 'Nao';
-
-    return responses;
-  };
-
-  const resetForm = () => setForm(initialForm);
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!params?.id) return;
+
     setIsSubmitting(true);
     setFeedback(null);
 
     try {
-      const payload = {
+      await api.patch(`/clients/${params.id}`, {
         name: form.name,
         email: form.email || undefined,
         phone: form.contact || undefined,
@@ -183,54 +271,67 @@ export default function AnamnesisPage() {
         country: form.country || undefined,
         birthDate: form.birthDate || undefined,
         language: form.language || undefined,
-        source: 'Anamnese Geral (Web)',
-        tags: [],
-        notes: undefined,
-        intimateAssessmentPhotos: [],
-        anamnesisResponses: buildAnamnesisPayload(form)
-      };
-
-      const response = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        anamnesisResponses: buildPayloadFromForm(form)
       });
 
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Erro ao enviar formulario.');
-      }
-
-      resetForm();
-      setFeedback({ type: 'success', message: 'Formulario enviado com sucesso.' });
+      setFeedback({ type: "success", message: "Ficha atualizada com sucesso." });
     } catch (error) {
       console.error(error);
       setFeedback({
-        type: 'error',
+        type: "error",
         message:
           error instanceof Error
             ? error.message
-            : 'Ocorreu um erro ao enviar o formulario. Tente novamente.'
+            : "Nao foi possivel salvar a ficha. Tente novamente."
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 py-10">
+        <div className="mx-auto max-w-5xl space-y-8 px-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-500 shadow-sm">
+            Carregando ficha do cliente...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 py-10">
-      <div className="mx-auto max-w-5xl space-y-10 px-4">
-        <header className="text-center">
-          <h1 className="text-4xl font-semibold text-slate-900">Anamnese Geral</h1>
-          <p className="mt-4 text-sm text-gray-500">
-            Preencha cuidadosamente todas as informacoes para que possamos oferecer um atendimento mais seguro e
-            personalizado.
-          </p>
-        </header>
+      <div className="mx-auto max-w-5xl space-y-8 px-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-900">Ficha de anamnese</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Preencha as respostas com o paciente. As informacoes serao salvas automaticamente na ficha do cliente.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+            >
+              Voltar
+            </button>
+            {client && (
+              <Link
+                href={`/clients/${client.id}`}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+              >
+                Ver ficha completa
+              </Link>
+            )}
+          </div>
+        </div>
 
         <form className="space-y-8" onSubmit={handleSubmit}>
+          {/* Dados do cliente */}
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-800">Dados do cliente</h2>
             <p className="mb-6 text-sm text-gray-500">
@@ -242,7 +343,7 @@ export default function AnamnesisPage() {
                 Nome
                 <input
                   value={form.name}
-                  onChange={(event) => updateField('name', event.target.value as string)}
+                  onChange={(event) => updateField('name', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   placeholder="Nome completo"
                   required
@@ -253,7 +354,7 @@ export default function AnamnesisPage() {
                 E-mail
                 <input
                   value={form.email}
-                  onChange={(event) => updateField('email', event.target.value as string)}
+                  onChange={(event) => updateField('email', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   type="email"
                   placeholder="nome@exemplo.com"
@@ -264,7 +365,7 @@ export default function AnamnesisPage() {
                 Telefone
                 <input
                   value={form.contact}
-                  onChange={(event) => updateField('contact', event.target.value as string)}
+                  onChange={(event) => updateField('contact', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   placeholder="(00) 00000-0000"
                 />
@@ -274,7 +375,7 @@ export default function AnamnesisPage() {
                 Idade
                 <input
                   value={form.age}
-                  onChange={(event) => updateField('age', event.target.value as string)}
+                  onChange={(event) => updateField('age', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   type="number"
                   min={0}
@@ -285,7 +386,7 @@ export default function AnamnesisPage() {
                 Pais
                 <input
                   value={form.country}
-                  onChange={(event) => updateField('country', event.target.value as string)}
+                  onChange={(event) => updateField('country', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   placeholder="Ex.: Brasil"
                 />
@@ -295,7 +396,7 @@ export default function AnamnesisPage() {
                 Data de nascimento
                 <input
                   value={form.birthDate}
-                  onChange={(event) => updateField('birthDate', event.target.value as string)}
+                  onChange={(event) => updateField('birthDate', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   type="date"
                 />
@@ -305,7 +406,7 @@ export default function AnamnesisPage() {
                 Idioma
                 <input
                   value={form.language}
-                  onChange={(event) => updateField('language', event.target.value as string)}
+                  onChange={(event) => updateField('language', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   placeholder="Idioma principal"
                 />
@@ -313,6 +414,7 @@ export default function AnamnesisPage() {
             </div>
           </section>
 
+          {/* Conhecendo melhor */}
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-800">Conhecendo melhor</h2>
             <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -320,7 +422,7 @@ export default function AnamnesisPage() {
                 Como nos conheceu?
                 <input
                   value={form.howDidYouKnow}
-                  onChange={(event) => updateField('howDidYouKnow', event.target.value as string)}
+                  onChange={(event) => updateField('howDidYouKnow', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   placeholder="Escolha ou descreva"
                 />
@@ -330,7 +432,7 @@ export default function AnamnesisPage() {
                 Recomendacao de
                 <input
                   value={form.referredBy}
-                  onChange={(event) => updateField('referredBy', event.target.value as string)}
+                  onChange={(event) => updateField('referredBy', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   placeholder="Se houver, informe quem indicou"
                 />
@@ -340,7 +442,7 @@ export default function AnamnesisPage() {
                 Autoestima (0-10)
                 <input
                   value={form.selfEsteem}
-                  onChange={(event) => updateField('selfEsteem', event.target.value as string)}
+                  onChange={(event) => updateField('selfEsteem', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   type="number"
                   min={0}
@@ -350,6 +452,7 @@ export default function AnamnesisPage() {
             </div>
           </section>
 
+          {/* Habitos */}
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-800">Habitos e estilo de vida</h2>
             <p className="mb-6 text-sm text-gray-500">
@@ -357,7 +460,7 @@ export default function AnamnesisPage() {
             </p>
 
             <div className="space-y-4">
-              {Object.keys(form.habits).map((question) => (
+              {HABITS_KEYS.map((question) => (
                 <div
                   key={question}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3"
@@ -367,7 +470,11 @@ export default function AnamnesisPage() {
                     {yesNoOptions.map((option) => (
                       <label
                         key={option}
-                        className="flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition "
+                        className={`flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                          form.habits[question] === option
+                            ? 'border-[#45b39d] bg-[#45b39d]/10 text-[#45b39d]'
+                            : 'border-gray-200 text-gray-500'
+                        }`}
                       >
                         <input
                           type="radio"
@@ -384,32 +491,29 @@ export default function AnamnesisPage() {
             </div>
 
             <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <label className="block text-sm font-medium text-gray-600">
-                Passa mais tempo em pe ou sentada?
-                <input
-                  value={form.habitsAdditional['Passa mais tempo em pe ou sentada?']}
-                  onChange={(event) =>
-                    handleAdditionalChange(
-                      'habitsAdditional',
-                      'Passa mais tempo em pe ou sentada?',
-                      event.target.value as string
-                    )
-                  }
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
-                  placeholder="Descreva brevemente"
-                />
-              </label>
+              {HABITS_ADDITIONAL_KEYS.map((question) => (
+                <label key={question} className="block text-sm font-medium text-gray-600">
+                  {question}
+                  <input
+                    value={form.habitsAdditional[question]}
+                    onChange={(event) => handleAdditionalChange('habitsAdditional', question, event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                    placeholder="Descreva brevemente"
+                  />
+                </label>
+              ))}
             </div>
           </section>
 
+          {/* Condicoes medicas */}
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-800">Condicoes medicas</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Informe se o cliente possui alguma condicao medica relevante.
+              Informe se o cliente possui alguma condicao relevante para a avaliacao.
             </p>
 
             <div className="space-y-4">
-              {Object.keys(form.medical).map((question) => (
+              {MEDICAL_KEYS.map((question) => (
                 <div
                   key={question}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3"
@@ -419,7 +523,11 @@ export default function AnamnesisPage() {
                     {yesNoOptions.map((option) => (
                       <label
                         key={option}
-                        className="flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition "
+                        className={`flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                          form.medical[question] === option
+                            ? 'border-[#45b39d] bg-[#45b39d]/10 text-[#45b39d]'
+                            : 'border-gray-200 text-gray-500'
+                        }`}
                       >
                         <input
                           type="radio"
@@ -436,56 +544,25 @@ export default function AnamnesisPage() {
             </div>
 
             <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <label className="block text-sm font-medium text-gray-600">
-                Hipo/hipertensao? Usa medicacao?
-                <input
-                  value={form.medicalAdditional['Hipo/hipertensao? Usa medicacao?']}
-                  onChange={(event) =>
-                    handleAdditionalChange(
-                      'medicalAdditional',
-                      'Hipo/hipertensao? Usa medicacao?',
-                      event.target.value as string
-                    )
-                  }
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
-                  placeholder="Detalhe a medicacao e a frequencia"
-                />
-              </label>
-
-              <label className="block text-sm font-medium text-gray-600">
-                Diabetes (Tipo)
-                <input
-                  value={form.medicalAdditional['Diabetes (Tipo)']}
-                  onChange={(event) =>
-                    handleAdditionalChange('medicalAdditional', 'Diabetes (Tipo)', event.target.value as string)
-                  }
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
-                  placeholder="Tipo 1, Tipo 2, gestacional, etc."
-                />
-              </label>
-
-              <label className="block text-sm font-medium text-gray-600">
-                Uso de PMMA (Zona)
-                <input
-                  value={form.medicalAdditional['Uso de PMMA (Zona)']}
-                  onChange={(event) =>
-                    handleAdditionalChange(
-                      'medicalAdditional',
-                      'Uso de PMMA (Zona)',
-                      event.target.value as string
-                    )
-                  }
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
-                  placeholder="Informe a regiao onde foi aplicado"
-                />
-              </label>
+              {MEDICAL_ADDITIONAL_KEYS.map((question) => (
+                <label key={question} className="block text-sm font-medium text-gray-600">
+                  {question}
+                  <input
+                    value={form.medicalAdditional[question]}
+                    onChange={(event) => handleAdditionalChange('medicalAdditional', question, event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                    placeholder="Detalhe se necessario"
+                  />
+                </label>
+              ))}
             </div>
           </section>
 
+          {/* Outras informacoes */}
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-800">Outras informacoes</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Complete os dados finais para concluir o formulario.
+              Complete os campos finais para concluir a ficha.
             </p>
 
             <div className="space-y-6">
@@ -503,7 +580,11 @@ export default function AnamnesisPage() {
                     {yesNoOptions.map((option) => (
                       <label
                         key={option}
-                        className="flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition "
+                        className={`flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                          form.medical[question] === option
+                            ? 'border-[#45b39d] bg-[#45b39d]/10 text-[#45b39d]'
+                            : 'border-gray-200 text-gray-500'
+                        }`}
                       >
                         <input
                           type="radio"
@@ -534,7 +615,7 @@ export default function AnamnesisPage() {
                 <input
                   type="date"
                   value={form.formDate}
-                  onChange={(event) => updateField('formDate', event.target.value as string)}
+                  onChange={(event) => updateField('formDate', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                 />
               </label>
@@ -543,10 +624,10 @@ export default function AnamnesisPage() {
                 Assinatura digital
                 <textarea
                   value={form.signature}
-                  onChange={(event) => updateField('signature', event.target.value as string)}
+                  onChange={(event) => updateField('signature', event.target.value)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   rows={3}
-                  placeholder="Digite seu nome completo para validar a assinatura digital."
+                  placeholder="Digite o nome completo para validar a assinatura digital."
                 />
               </label>
             </div>
@@ -554,7 +635,11 @@ export default function AnamnesisPage() {
 
           {feedback && (
             <div
-              className="ounded-xl border px-4 py-3 text-sm "
+              className={`rounded-xl border px-4 py-3 text-sm ${
+                feedback.type === "success"
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-red-200 bg-red-50 text-red-600'
+              }`}
             >
               {feedback.message}
             </div>
@@ -562,20 +647,13 @@ export default function AnamnesisPage() {
 
           <button
             type="submit"
-            disabled={isSubmitting || !form.consent}
+            disabled={isSubmitting}
             className="w-full rounded-xl bg-[#45b39d] px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-[#379682] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSubmitting ? 'Enviando...' : 'Enviar formulario'}
+            {isSubmitting ? 'Salvando...' : 'Salvar ficha'}
           </button>
         </form>
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-

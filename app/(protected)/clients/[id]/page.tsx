@@ -59,6 +59,7 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const id = params?.id;
@@ -85,14 +86,65 @@ export default function ClientDetailPage() {
     void loadClient();
   }, [params?.id]);
 
+  useEffect(() => {
+    if (!selectedPhoto) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedPhoto(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedPhoto]);
+
   const anamnesisEntries = useMemo(() => {
     if (!client?.anamnesisResponses) return [];
     return Object.entries(client.anamnesisResponses);
   }, [client?.anamnesisResponses]);
 
+  const handleClosePreview = () => setSelectedPhoto(null);
+
   return (
     <div className="min-h-screen bg-gray-100 py-10">
       <div className="mx-auto max-w-6xl space-y-8 px-4">
+        {selectedPhoto && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            onClick={handleClosePreview}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="relative w-full max-w-4xl rounded-2xl bg-white p-4 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={handleClosePreview}
+                className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-sm font-medium text-white transition hover:bg-black/80"
+                aria-label="Fechar imagem"
+              >
+                X
+              </button>
+              <div className="relative mx-auto mt-6 h-[70vh] w-full">
+                <Image
+                  src={selectedPhoto}
+                  alt="Imagem selecionada"
+                  fill
+                  sizes="(min-width: 1024px) 1024px, 100vw"
+                  unoptimized
+                  className="object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
@@ -214,13 +266,13 @@ export default function ClientDetailPage() {
               ) : (
                 <div className="flex flex-wrap gap-4">
                   {client.intimateAssessmentPhotos.map((url, index) => (
-                    <a
+                    <button
                       key={`${url}-${index}`}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative block h-28 w-28 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition hover:shadow-md"
+                      type="button"
+                      onClick={() => setSelectedPhoto(url)}
+                      className="group relative block h-28 w-28 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     >
+                      <span className="sr-only">Ampliar imagem</span>
                       <Image
                         src={url}
                         alt={`Imagem ${index + 1}`}
@@ -228,7 +280,7 @@ export default function ClientDetailPage() {
                         unoptimized
                         className="object-cover transition group-hover:scale-105"
                       />
-                    </a>
+                    </button>
                   ))}
                 </div>
               )}
