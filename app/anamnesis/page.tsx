@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 
-type YesNo = 'Sim' | 'Nao';
+type YesNo = 'Sim' | 'Não';
 
 interface ClientForm {
   name: string;
@@ -24,51 +24,51 @@ interface ClientForm {
   medicalAdditional: Record<string, string>;
 }
 
-const yesNoOptions: YesNo[] = ['Sim', 'Nao'];
+const yesNoOptions: YesNo[] = ['Sim', 'Não'];
 
 const initialHabitsQuestions: Record<string, YesNo> = {
-  'Ja realizou tratamento estetico anteriormente?': 'Nao',
-  'Usa cosmeticos diariamente?': 'Nao',
-  'Usa protetor solar diariamente?': 'Nao',
-  'Esta exposta ao sol?': 'Nao',
-  'Consome bebidas alcoolicas ou fuma?': 'Nao',
-  'Realiza atividade fisica?': 'Nao',
-  'Usa anticoncepcionais?': 'Nao',
-  'Esta gravida ou amamentando?': 'Nao',
-  'Tem filhos?': 'Nao',
-  'Esta sob tratamento medico?': 'Nao',
-  'Toma medicamentos ou anticoagulantes?': 'Nao',
-  'Tem alergias?': 'Nao'
+  'Já realizou tratamento estético anteriormente?': 'Não',
+  'Usa cosméticos diariamente?': 'Não',
+  'Usa protetor solar diariamente?': 'Não',
+  'Está exposta ao sol?': 'Não',
+  'Consome bebidas alcoólicas ou fuma?': 'Não',
+  'Realiza atividade física?': 'Não',
+  'Usa anticoncepcionais?': 'Não',
+  'Está grávida ou amamentando?': 'Não',
+  'Tem filhos?': 'Não',
+  'Está sob tratamento médico?': 'Não',
+  'Toma medicamentos ou anticoagulantes?': 'Não',
+  'Tem alergias?': 'Não'
 };
 
 const initialHabitsAdditional: Record<string, string> = {
-  'Passa mais tempo em pe ou sentada?': ''
+  'Passa mais tempo em pé ou sentada?': ''
 };
 
 const initialMedicalQuestions: Record<string, YesNo> = {
-  'Reacao alergica a anestesicos?': 'Nao',
-  'Usa marcapasso?': 'Nao',
-  'Alteracoes cardiacas?': 'Nao',
-  'Epilepsia ou convulsoes?': 'Nao',
-  'Alteracoes psicologicas ou psiquiatricas?': 'Nao',
-  'Pessoa estressada?': 'Nao',
-  'Hipo/hipertensao?': 'Nao',
-  'Diabetes?': 'Nao',
-  'Transtorno circulatorio?': 'Nao',
-  'Transtorno renal?': 'Nao',
-  'Transtorno hormonal?': 'Nao',
-  'Transtorno gastrointestinal?': 'Nao',
-  'Antecedente oncologico?': 'Nao',
-  'Doenca autoimune?': 'Nao',
-  'Herpes?': 'Nao',
-  'Portador(a) de HIV?': 'Nao',
-  'Protese metalica ou implante dental?': 'Nao',
-  'Cirurgia plastica ou reparadora?': 'Nao',
-  'Uso de PMMA (preenchimento)?': 'Nao'
+  'Reação alérgica a anestésicos?': 'Não',
+  'Usa marcapasso?': 'Não',
+  'Alterações cardíacas?': 'Não',
+  'Epilepsia ou convulsões?': 'Não',
+  'Alterações psicológicas ou psiquiátricas?': 'Não',
+  'Pessoa estressada?': 'Não',
+  'Hipo/hipertensão?': 'Não',
+  'Diabetes?': 'Não',
+  'Transtorno circulatório?': 'Não',
+  'Transtorno renal?': 'Não',
+  'Transtorno hormonal?': 'Não',
+  'Transtorno gastrointestinal?': 'Não',
+  'Antecedente oncológico?': 'Não',
+  'Doença autoimune?': 'Não',
+  'Herpes?': 'Não',
+  'Portador(a) de HIV?': 'Não',
+  'Prótese metálica ou implante dental?': 'Não',
+  'Cirurgia plástica ou reparadora?': 'Não',
+  'Uso de PMMA (preenchimento)?': 'Não'
 };
 
 const initialMedicalAdditional: Record<string, string> = {
-  'Hipo/hipertensao? Usa medicacao?': '',
+  'Hipo/hipertensão? Usa medicação?': '',
   'Diabetes (Tipo)': '',
   'Uso de PMMA (Zona)': ''
 };
@@ -136,7 +136,7 @@ export default function AnamnesisPage() {
   const buildAnamnesisPayload = (state: ClientForm) => {
     const responses: Record<string, unknown> = {
       'Como nos conheceu?': state.howDidYouKnow,
-      'Recomendacao de': state.referredBy,
+      'Recomendação de': state.referredBy,
       'Autoestima (0-10)': state.selfEsteem
     };
 
@@ -162,7 +162,7 @@ export default function AnamnesisPage() {
 
     responses['Data do preenchimento'] = form.formDate;
     responses['Assinatura'] = form.signature;
-    responses['Concordancia com uso de dados'] = form.consent ? 'Sim' : 'Nao';
+    responses['Concordância com uso de dados'] = form.consent ? 'Sim' : 'Não';
 
     return responses;
   };
@@ -200,11 +200,11 @@ export default function AnamnesisPage() {
 
       if (!response.ok) {
         const message = await response.text();
-        throw new Error(message || 'Erro ao enviar formulario.');
+        throw new Error(message || 'Erro ao enviar formulário.');
       }
 
       resetForm();
-      setFeedback({ type: 'success', message: 'Formulario enviado com sucesso.' });
+      setFeedback({ type: 'success', message: 'Formulário enviado com sucesso.' });
     } catch (error) {
       console.error(error);
       setFeedback({
@@ -212,7 +212,7 @@ export default function AnamnesisPage() {
         message:
           error instanceof Error
             ? error.message
-            : 'Ocorreu um erro ao enviar o formulario. Tente novamente.'
+            : 'Ocorreu um erro ao enviar o formulário. Tente novamente.'
       });
     } finally {
       setIsSubmitting(false);
@@ -225,7 +225,7 @@ export default function AnamnesisPage() {
         <header className="text-center">
           <h1 className="text-4xl font-semibold text-slate-900">Anamnese Geral</h1>
           <p className="mt-4 text-sm text-gray-500">
-            Preencha cuidadosamente todas as informacoes para que possamos oferecer um atendimento mais seguro e
+            Preencha cuidadosamente todas as informações para que possamos oferecer um atendimento mais seguro e
             personalizado.
           </p>
         </header>
@@ -234,7 +234,7 @@ export default function AnamnesisPage() {
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-800">Dados do cliente</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Informe os dados pessoais do cliente. Essas informacoes podem ser atualizadas posteriormente.
+              Informe os dados pessoais do cliente. Essas informações podem ser atualizadas posteriormente.
             </p>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -282,7 +282,7 @@ export default function AnamnesisPage() {
               </label>
 
               <label className="block text-sm font-medium text-gray-600">
-                Pais
+                País
                 <input
                   value={form.country}
                   onChange={(event) => updateField('country', event.target.value as string)}
@@ -327,7 +327,7 @@ export default function AnamnesisPage() {
               </label>
 
               <label className="block text-sm font-medium text-gray-600">
-                Recomendacao de
+                Recomendação de
                 <input
                   value={form.referredBy}
                   onChange={(event) => updateField('referredBy', event.target.value as string)}
@@ -351,9 +351,9 @@ export default function AnamnesisPage() {
           </section>
 
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800">Habitos e estilo de vida</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Hábitos e estilo de vida</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Registre os habitos do cliente para personalizar os tratamentos.
+              Registre os hábitos do cliente para personalizar os tratamentos.
             </p>
 
             <div className="space-y-4">
@@ -385,13 +385,13 @@ export default function AnamnesisPage() {
 
             <div className="mt-6 grid gap-6 md:grid-cols-2">
               <label className="block text-sm font-medium text-gray-600">
-                Passa mais tempo em pe ou sentada?
+                Passa mais tempo em pé ou sentada?
                 <input
-                  value={form.habitsAdditional['Passa mais tempo em pe ou sentada?']}
+                  value={form.habitsAdditional['Passa mais tempo em pé ou sentada?']}
                   onChange={(event) =>
                     handleAdditionalChange(
                       'habitsAdditional',
-                      'Passa mais tempo em pe ou sentada?',
+                      'Passa mais tempo em pé ou sentada?',
                       event.target.value as string
                     )
                   }
@@ -403,9 +403,9 @@ export default function AnamnesisPage() {
           </section>
 
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800">Condicoes medicas</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Condições médicas</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Informe se o cliente possui alguma condicao medica relevante.
+              Informe se o cliente possui alguma condição médica relevante.
             </p>
 
             <div className="space-y-4">
@@ -437,18 +437,18 @@ export default function AnamnesisPage() {
 
             <div className="mt-6 grid gap-6 md:grid-cols-2">
               <label className="block text-sm font-medium text-gray-600">
-                Hipo/hipertensao? Usa medicacao?
+                Hipo/hipertensão? Usa medicação?
                 <input
-                  value={form.medicalAdditional['Hipo/hipertensao? Usa medicacao?']}
+                  value={form.medicalAdditional['Hipo/hipertensão? Usa medicação?']}
                   onChange={(event) =>
                     handleAdditionalChange(
                       'medicalAdditional',
-                      'Hipo/hipertensao? Usa medicacao?',
+                      'Hipo/hipertensão? Usa medicação?',
                       event.target.value as string
                     )
                   }
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
-                  placeholder="Detalhe a medicacao e a frequencia"
+                  placeholder="Detalhe a medicação e a frequência"
                 />
               </label>
 
@@ -476,22 +476,22 @@ export default function AnamnesisPage() {
                     )
                   }
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
-                  placeholder="Informe a regiao onde foi aplicado"
+                  placeholder="Informe a região onde foi aplicado"
                 />
               </label>
             </div>
           </section>
 
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800">Outras informacoes</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Outras informações</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Complete os dados finais para concluir o formulario.
+              Complete os dados finais para concluir o formulário.
             </p>
 
             <div className="space-y-6">
               {[
-                'Protese metalica ou implante dental?',
-                'Cirurgia plastica ou reparadora?',
+                'Prótese metálica ou implante dental?',
+                'Cirurgia plástica ou reparadora?',
                 'Uso de PMMA (preenchimento)?'
               ].map((question) => (
                 <div
@@ -526,7 +526,7 @@ export default function AnamnesisPage() {
                   className="h-4 w-4 rounded border-gray-300 text-[#45b39d] focus:ring-[#45b39d]"
                   required
                 />
-                Autorizo o uso de meus dados e imagem conforme a politica da clinica.
+                Autorizo o uso de meus dados e imagem conforme a política da clínica.
               </label>
 
               <label className="block text-sm font-medium text-gray-600">
@@ -554,7 +554,7 @@ export default function AnamnesisPage() {
 
           {feedback && (
             <div
-              className="ounded-xl border px-4 py-3 text-sm "
+              className="rounded-xl border px-4 py-3 text-sm"
             >
               {feedback.message}
             </div>
@@ -565,13 +565,15 @@ export default function AnamnesisPage() {
             disabled={isSubmitting || !form.consent}
             className="w-full rounded-xl bg-[#45b39d] px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-[#379682] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSubmitting ? 'Enviando...' : 'Enviar formulario'}
+            {isSubmitting ? 'Enviando...' : 'Enviar formulário'}
           </button>
         </form>
       </div>
     </div>
   );
 }
+
+
 
 
 

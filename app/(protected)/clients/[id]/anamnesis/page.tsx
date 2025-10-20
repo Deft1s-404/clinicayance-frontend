@@ -7,7 +7,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import api from "../../../../../lib/api";
 import { Client } from "../../../../../types";
 
-type YesNo = "Sim" | "Nao";
+type YesNo = "Sim" | "Não";
 
 interface ClientForm {
   name: string;
@@ -29,52 +29,52 @@ interface ClientForm {
   medicalAdditional: Record<string, string>;
 }
 
-const yesNoOptions: YesNo[] = ["Sim", "Nao"];
+const yesNoOptions: YesNo[] = ["Sim", "Não"];
 const howDidYouKnowOptions = ["Instagram", "Facebook", "Outros"];
 
 const initialHabitsQuestions: Record<string, YesNo> = {
-  "Ja realizou tratamento estetico anteriormente?": "Nao",
-  "Usa cosmeticos diariamente?": "Nao",
-  "Usa protetor solar diariamente?": "Nao",
-  "Esta exposta ao sol?": "Nao",
-  "Consome bebidas alcoolicas ou fuma?": "Nao",
-  "Realiza atividade fisica?": "Nao",
-  "Usa anticoncepcionais?": "Nao",
-  "Esta gravida ou amamentando?": "Nao",
-  "Tem filhos?": "Nao",
-  "Esta sob tratamento medico?": "Nao",
-  "Toma medicamentos ou anticoagulantes?": "Nao",
-  "Tem alergias?": "Nao"
+  "Já realizou tratamento estético anteriormente?": "Não",
+  "Usa cosméticos diariamente?": "Não",
+  "Usa protetor solar diariamente?": "Não",
+  "Está exposta ao sol?": "Não",
+  "Consome bebidas alcoólicas ou fuma?": "Não",
+  "Realiza atividade física?": "Não",
+  "Usa anticoncepcionais?": "Não",
+  "Está grávida ou amamentando?": "Não",
+  "Tem filhos?": "Não",
+  "Está sob tratamento médico?": "Não",
+  "Toma medicamentos ou anticoagulantes?": "Não",
+  "Tem alergias?": "Não"
 };
 
 const initialHabitsAdditional: Record<string, string> = {
-  "Passa mais tempo em pe ou sentada?": ""
+  "Passa mais tempo em pé ou sentada?": ""
 };
 
 const initialMedicalQuestions: Record<string, YesNo> = {
-  "Reacao alergica a anestesicos?": "Nao",
-  "Usa marcapasso?": "Nao",
-  "Alteracoes cardiacas?": "Nao",
-  "Epilepsia ou convulsoes?": "Nao",
-  "Alteracoes psicologicas ou psiquiatricas?": "Nao",
-  "Pessoa estressada?": "Nao",
-  "Hipo/hipertensao?": "Nao",
-  "Diabetes?": "Nao",
-  "Transtorno circulatorio?": "Nao",
-  "Transtorno renal?": "Nao",
-  "Transtorno hormonal?": "Nao",
-  "Transtorno gastrointestinal?": "Nao",
-  "Antecedente oncologico?": "Nao",
-  "Doenca autoimune?": "Nao",
-  "Herpes?": "Nao",
-  "Portador(a) de HIV?": "Nao",
-  "Protese metalica ou implante dental?": "Nao",
-  "Cirurgia plastica ou reparadora?": "Nao",
-  "Uso de PMMA (preenchimento)?": "Nao"
+  "Reação alérgica a anestésicos?": "Não",
+  "Usa marcapasso?": "Não",
+  "Alterações cardíacas?": "Não",
+  "Epilepsia ou convulsões?": "Não",
+  "Alterações psicológicas ou psiquiátricas?": "Não",
+  "Pessoa estressada?": "Não",
+  "Hipo/hipertensão?": "Não",
+  "Diabetes?": "Não",
+  "Transtorno circulatório?": "Não",
+  "Transtorno renal?": "Não",
+  "Transtorno hormonal?": "Não",
+  "Transtorno gastrointestinal?": "Não",
+  "Antecedente oncológico?": "Não",
+  "Doença autoimune?": "Não",
+  "Herpes?": "Não",
+  "Portador(a) de HIV?": "Não",
+  "Prótese metálica ou implante dental?": "Não",
+  "Cirurgia plástica ou reparadora?": "Não",
+  "Uso de PMMA (preenchimento)?": "Não"
 };
 
 const initialMedicalAdditional: Record<string, string> = {
-  "Hipo/hipertensao? Usa medicacao?": "",
+  "Hipo/hipertensão? Usa medicação?": "",
   "Diabetes (Tipo)": "",
   "Uso de PMMA (Zona)": ""
 };
@@ -109,13 +109,13 @@ const toYesNo = (value: unknown): YesNo => {
   const normalized = String(value ?? "")
     .trim()
     .toLowerCase();
-  return normalized.startsWith("s") ? "Sim" : "Nao";
+  return normalized.startsWith("s") ? "Sim" : "Não";
 };
 
 const buildPayloadFromForm = (state: ClientForm) => {
   const responses: Record<string, unknown> = {
     "Como nos conheceu?": state.howDidYouKnow,
-    "Recomendacao de": state.referredBy,
+    "Recomendação de": state.referredBy,
     "Autoestima (0-10)": state.selfEsteem
   };
 
@@ -141,7 +141,7 @@ const buildPayloadFromForm = (state: ClientForm) => {
 
   responses["Data do preenchimento"] = state.formDate;
   responses["Assinatura"] = state.signature;
-  responses["Concordancia com uso de dados"] = state.consent ? "Sim" : "Nao";
+  responses["Concordância com uso de dados"] = state.consent ? "Sim" : "Não";
 
   return responses;
 };
@@ -192,9 +192,9 @@ export default function ClientAnamnesisEditorPage() {
           language: data.language ?? "",
           howDidYouKnow:
             String(responses.get(normalizeKey("Como nos conheceu?")) ?? howDidYouKnowOptions[0]),
-          referredBy: String(responses.get(normalizeKey("Recomendacao de")) ?? ""),
+          referredBy: String(responses.get(normalizeKey("Recomendação de")) ?? ""),
           selfEsteem: String(responses.get(normalizeKey("Autoestima (0-10)")) ?? "5"),
-          consent: String(responses.get(normalizeKey("Concordancia com uso de dados")) ?? "")
+          consent: String(responses.get(normalizeKey("Concordância com uso de dados")) ?? "")
             .toLowerCase()
             .startsWith("s"),
           formDate: String(responses.get(normalizeKey("Data do preenchimento")) ?? ""),
@@ -218,7 +218,7 @@ export default function ClientAnamnesisEditorPage() {
         });
       } catch (error) {
         console.error(error);
-        setFeedback({ type: "error", message: "Nao foi possivel carregar a ficha deste cliente." });
+        setFeedback({ type: "error", message: "Não foi possível carregar a ficha deste cliente." });
       } finally {
         setIsLoading(false);
       }
@@ -282,7 +282,7 @@ export default function ClientAnamnesisEditorPage() {
         message:
           error instanceof Error
             ? error.message
-            : "Nao foi possivel salvar a ficha. Tente novamente."
+            : "Não foi possível salvar a ficha. Tente novamente."
       });
     } finally {
       setIsSubmitting(false);
@@ -308,7 +308,7 @@ export default function ClientAnamnesisEditorPage() {
           <div>
             <h1 className="text-3xl font-semibold text-slate-900">Ficha de anamnese</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Preencha as respostas com o paciente. As informacoes serao salvas automaticamente na ficha do cliente.
+              Preencha as respostas com o paciente. As informações serão salvas automaticamente na ficha do cliente.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -335,7 +335,7 @@ export default function ClientAnamnesisEditorPage() {
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-800">Dados do cliente</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Informe os dados pessoais do cliente. Essas informacoes podem ser atualizadas posteriormente.
+              Informe os dados pessoais do cliente. Essas informações podem ser atualizadas posteriormente.
             </p>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -383,7 +383,7 @@ export default function ClientAnamnesisEditorPage() {
               </label>
 
               <label className="block text-sm font-medium text-gray-600">
-                Pais
+                País
                 <input
                   value={form.country}
                   onChange={(event) => updateField('country', event.target.value)}
@@ -429,7 +429,7 @@ export default function ClientAnamnesisEditorPage() {
               </label>
 
               <label className="block text-sm font-medium text-gray-600">
-                Recomendacao de
+                Recomendação de
                 <input
                   value={form.referredBy}
                   onChange={(event) => updateField('referredBy', event.target.value)}
@@ -452,11 +452,11 @@ export default function ClientAnamnesisEditorPage() {
             </div>
           </section>
 
-          {/* Habitos */}
+          {/* Hábitos */}
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800">Habitos e estilo de vida</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Hábitos e estilo de vida</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Registre os habitos do cliente para personalizar os tratamentos.
+              Registre os hábitos do cliente para personalizar os tratamentos.
             </p>
 
             <div className="space-y-4">
@@ -505,11 +505,11 @@ export default function ClientAnamnesisEditorPage() {
             </div>
           </section>
 
-          {/* Condicoes medicas */}
+          {/* Condições médicas */}
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800">Condicoes medicas</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Condições médicas</h2>
             <p className="mb-6 text-sm text-gray-500">
-              Informe se o cliente possui alguma condicao relevante para a avaliacao.
+              Informe se o cliente possui alguma condição relevante para a avaliação.
             </p>
 
             <div className="space-y-4">
@@ -551,24 +551,24 @@ export default function ClientAnamnesisEditorPage() {
                     value={form.medicalAdditional[question]}
                     onChange={(event) => handleAdditionalChange('medicalAdditional', question, event.target.value)}
                     className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
-                    placeholder="Detalhe se necessario"
+                    placeholder="Detalhe se necessário"
                   />
                 </label>
               ))}
             </div>
           </section>
 
-          {/* Outras informacoes */}
+          {/* Outras informações */}
           <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800">Outras informacoes</h2>
+            <h2 className="text-lg font-semibold text-slate-800">Outras informações</h2>
             <p className="mb-6 text-sm text-gray-500">
               Complete os campos finais para concluir a ficha.
             </p>
 
             <div className="space-y-6">
               {[
-                'Protese metalica ou implante dental?',
-                'Cirurgia plastica ou reparadora?',
+                'Prótese metálica ou implante dental?',
+                'Cirurgia plástica ou reparadora?',
                 'Uso de PMMA (preenchimento)?'
               ].map((question) => (
                 <div
@@ -607,7 +607,7 @@ export default function ClientAnamnesisEditorPage() {
                   className="h-4 w-4 rounded border-gray-300 text-[#45b39d] focus:ring-[#45b39d]"
                   required
                 />
-                Autorizo o uso de meus dados e imagem conforme a politica da clinica.
+                Autorizo o uso de meus dados e imagem conforme a política da clínica.
               </label>
 
               <label className="block text-sm font-medium text-gray-600">

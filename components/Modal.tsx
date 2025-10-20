@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 
 const sizeClassMap = {
-  md: 'max-w-2xl',
+  md: 'max-w-3xl',
   lg: 'max-w-4xl',
   xl: 'max-w-5xl'
 } as const;
@@ -33,7 +33,7 @@ export const Modal = ({
     return null;
   }
 
-  const containerClasses = `w-full ${sizeClassMap[size]} rounded-2xl bg-white p-6 shadow-2xl ${className}`.trim();
+  const containerClasses = `w-full ${sizeClassMap[size]} max-h-[85vh] overflow-hidden rounded-2xl bg-white shadow-2xl ${className}`.trim();
 
   return (
     <div
@@ -41,8 +41,8 @@ export const Modal = ({
       onClick={closeOnBackdrop ? onClose : undefined}
       role="presentation"
     >
-      <div className={containerClasses} onClick={(event) => event.stopPropagation()} role="dialog">
-        <div className="mb-4 flex items-center justify-between">
+      <div className={`${containerClasses} flex flex-col`} onClick={(event) => event.stopPropagation()} role="dialog">
+        <div className="flex items-center justify-between gap-4 border-b border-gray-100 px-6 py-4">
           <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
           <button
             onClick={onClose}
@@ -52,7 +52,9 @@ export const Modal = ({
             Fechar
           </button>
         </div>
-        <div className="space-y-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+          <div className="space-y-4">{children}</div>
+        </div>
       </div>
     </div>
   );
