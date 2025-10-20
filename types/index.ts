@@ -83,6 +83,7 @@ export interface Campaign {
   name: string;
   channel: string;
   message: string;
+  imageUrl?: string | null;
   status: string;
   scheduledAt?: string | null;
   logs?: CampaignLog[];

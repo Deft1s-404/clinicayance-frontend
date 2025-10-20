@@ -8,6 +8,14 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
 import { Campaign, CampaignLog } from '../../../types';
 
+const readFileAsDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
 type CampaignStatusOption = 'DRAFT' | 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 interface CampaignsResponse {
@@ -34,6 +42,7 @@ export default function CampaignsPage() {
     name: '',
     channel: '',
     message: '',
+    imageUrl: '',
     status: 'DRAFT',
     scheduledAt: ''
   });
@@ -66,6 +75,7 @@ export default function CampaignsPage() {
         name: campaign.name,
         channel: campaign.channel,
         message: campaign.message,
+        imageUrl: campaign.imageUrl ?? '',
         status: campaign.status,
         scheduledAt: campaign.scheduledAt ? campaign.scheduledAt.slice(0, 16) : ''
       });
@@ -75,6 +85,7 @@ export default function CampaignsPage() {
         name: '',
         channel: '',
         message: '',
+        imageUrl: '',
         status: 'DRAFT',
         scheduledAt: ''
       });
@@ -82,10 +93,26 @@ export default function CampaignsPage() {
     setIsModalOpen(true);
   };
 
+  const handleImageUpload = async (fileList: FileList | null) => {
+    if (!fileList?.length) {
+      return;
+    }
+
+    try {
+      const [file] = Array.from(fileList);
+      const dataUrl = await readFileAsDataUrl(file);
+      setFormState((prev) => ({ ...prev, imageUrl: dataUrl }));
+    } catch (uploadError) {
+      console.error(uploadError);
+      setError('Nao foi possivel ler a imagem selecionada.');
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const payload = {
       ...formState,
+      imageUrl: formState.imageUrl || null,
       scheduledAt: formState.scheduledAt ? new Date(formState.scheduledAt).toISOString() : null
     };
 
@@ -314,6 +341,36 @@ export default function CampaignsPage() {
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
             />
           </label>
+
+          <label className="text-sm">
+            Imagem
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(event) => handleImageUpload(event.target.files)}
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+            />
+          </label>
+
+          {formState.imageUrl && (
+            <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+              <img
+                src={formState.imageUrl}
+                alt="Imagem da campanha selecionada"
+                className="h-16 w-16 rounded object-cover"
+              />
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">Uma imagem sera enviada com a campanha.</p>
+                <button
+                  type="button"
+                  onClick={() => setFormState((prev) => ({ ...prev, imageUrl: '' }))}
+                  className="text-xs font-semibold text-red-600 transition hover:underline"
+                >
+                  Remover imagem
+                </button>
+              </div>
+            </div>
+          )}
 
           <button
             type="submit"
