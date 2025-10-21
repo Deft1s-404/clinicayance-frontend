@@ -77,9 +77,9 @@ export default function LoginPage() {
           {submitting ? 'Entrando...' : 'Entrar'}
         </button>
 
-        <p className="mt-6 text-center text-xs text-gray-400">
+        {/* <p className="mt-6 text-center text-xs text-gray-400">
           Usuário padrão: admin@clinicayance.com / senha: admin123
-        </p>
+        </p> */}
       </form>
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
@@ -24,7 +24,6 @@ const stageOptions: LeadStageOption[] = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPO
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
-  const [clients, setClients] = useState<Client[]>([]);
   const [selectedStage, setSelectedStage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +37,10 @@ export default function LeadsPage() {
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [leadPendingDeletion, setLeadPendingDeletion] = useState<Lead | null>(null);
   const [isDeletingLead, setIsDeletingLead] = useState(false);
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [clientOptions, setClientOptions] = useState<Client[]>([]);
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [isClientSearchLoading, setIsClientSearchLoading] = useState(false);
 
   const fetchLeads = async (stageFilter?: string) => {
     try {
@@ -58,19 +61,53 @@ export default function LeadsPage() {
     }
   };
 
-  const fetchClients = async () => {
-    try {
-      const response = await api.get<ClientsResponse>('/clients', { params: { limit: 100 } });
-      setClients(response.data.data);
-    } catch (e) {
-      console.error('Erro ao buscar clientes', e);
-    }
-  };
+  const fetchClientOptions = useCallback(
+    async (query: string) => {
+      try {
+        setIsClientSearchLoading(true);
+        const params: Record<string, unknown> = { limit: 10 };
+        if (query.trim()) {
+          params.search = query.trim();
+        }
+        const response = await api.get<ClientsResponse>('/clients', { params });
+        const sortedClients = [...response.data.data].sort((a, b) =>
+          a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+        );
+        setClientOptions(sortedClients);
+      } catch (e) {
+        console.error('Erro ao buscar clientes', e);
+        setClientOptions([]);
+      } finally {
+        setIsClientSearchLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     fetchLeads();
-    fetchClients();
   }, []);
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      return;
+    }
+
+    const handler = window.setTimeout(() => {
+      void fetchClientOptions(clientSearchTerm);
+    }, 300);
+
+    return () => window.clearTimeout(handler);
+  }, [clientSearchTerm, fetchClientOptions, isModalOpen]);
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      setClientOptions([]);
+      setIsClientDropdownOpen(false);
+      setIsClientSearchLoading(false);
+      setClientSearchTerm('');
+    }
+  }, [isModalOpen]);
 
   const openModal = (lead?: Lead) => {
     if (lead) {
@@ -81,6 +118,7 @@ export default function LeadsPage() {
         notes: lead.notes ?? '',
         stage: lead.stage
       });
+      setClientSearchTerm(lead.client?.name ?? '');
     } else {
       setEditingLeadId(null);
       setFormState({
@@ -89,14 +127,46 @@ export default function LeadsPage() {
         notes: '',
         stage: 'NEW'
       });
+      setClientSearchTerm('');
     }
+    setIsClientDropdownOpen(false);
     setIsModalOpen(true);
+  };
+
+  const handleClientInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setClientSearchTerm(value);
+    setFormState((prev) => ({ ...prev, clientId: '' }));
+    setIsClientDropdownOpen(true);
+  };
+
+  const handleClientInputFocus = () => {
+    setIsClientDropdownOpen(true);
+    if (clientOptions.length === 0) {
+      void fetchClientOptions(clientSearchTerm);
+    }
+  };
+
+  const handleClientInputBlur = () => {
+    window.setTimeout(() => {
+      setIsClientDropdownOpen(false);
+    }, 150);
+  };
+
+  const handleSelectClient = (client: Client) => {
+    setFormState((prev) => ({ ...prev, clientId: client.id }));
+    setClientSearchTerm(client.name);
+    setIsClientDropdownOpen(false);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       setError(null);
+      if (!formState.clientId) {
+        setError('Selecione um cliente antes de salvar o lead.');
+        return;
+      }
       if (editingLeadId) {
         await api.patch(`/leads/${editingLeadId}`, formState);
       } else {
@@ -247,21 +317,51 @@ export default function LeadsPage() {
         <form onSubmit={handleSubmit} className="grid gap-4">
           <label className="text-sm">
             Cliente
-            <select
-              required
-              value={formState.clientId}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, clientId: event.target.value }))
-              }
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
-            >
-              <option value="">Selecione um cliente</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative mt-1">
+              <input
+                value={clientSearchTerm}
+                onChange={handleClientInputChange}
+                onFocus={handleClientInputFocus}
+                onBlur={handleClientInputBlur}
+                placeholder="Busque por nome, e-mail ou telefone"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+              />
+              {isClientSearchLoading && (
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400">
+                  Buscando...
+                </span>
+              )}
+              {isClientDropdownOpen && (
+                <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                  {clientOptions.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-gray-500">
+                      {clientSearchTerm.trim()
+                        ? 'Nenhum cliente encontrado.'
+                        : 'Digite para buscar clientes.'}
+                    </p>
+                  ) : (
+                    clientOptions.map((client) => (
+                      <button
+                        type="button"
+                        key={client.id}
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          handleSelectClient(client);
+                        }}
+                        className={`flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-gray-100 ${
+                          client.id === formState.clientId ? 'bg-gray-100' : ''
+                        }`}
+                      >
+                        <span className="font-medium text-slate-900">{client.name}</span>
+                        <span className="text-xs text-gray-500">
+                          {client.email ?? client.phone ?? 'Sem contato'}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </label>
 
           <label className="text-sm">
