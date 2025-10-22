@@ -39,6 +39,25 @@ type GoogleConnectionStatus = {
   lastSyncedAt: string | null;
 };
 
+type PaypalOAuthStateResponse = {
+  authorizeUrl?: string;
+  state: string;
+  redirectUri: string;
+  expiresAt: string;
+  scope: string[];
+};
+
+type PaypalConnectionStatus = {
+  connected: boolean;
+  email: string | null;
+  scope: string | null;
+  expiresAt: string | null;
+  hasRefreshToken: boolean;
+  lastSyncedAt: string | null;
+  merchantId: string | null;
+  payerId: string | null;
+};
+
 type EvolutionQrPayload = {
   svg: string | null;
   base64: string | null;
@@ -107,6 +126,10 @@ export default function IntegrationsPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleStatusLoading, setGoogleStatusLoading] = useState(true);
   const [googleConnection, setGoogleConnection] = useState<GoogleConnectionStatus | null>(null);
+  const [paypalError, setPaypalError] = useState<string | null>(null);
+  const [isPaypalLoading, setIsPaypalLoading] = useState(false);
+  const [paypalStatusLoading, setPaypalStatusLoading] = useState(true);
+  const [paypalConnection, setPaypalConnection] = useState<PaypalConnectionStatus | null>(null);
 
   const [evolutionInstances, setEvolutionInstances] = useState<EvolutionSession[]>([]);
   const [selectedEvolutionInstanceId, setSelectedEvolutionInstanceId] = useState<string | null>(null);
@@ -184,6 +207,7 @@ export default function IntegrationsPage() {
 
   const statusParam = searchParams.get('status');
   const messageParam = searchParams.get('message');
+  const integrationParam = searchParams.get('integration');
 
   const requestEvolutionRemoveInstance = useCallback((instance: EvolutionSession) => {
     setEvolutionInstancePendingRemoval(instance);
@@ -199,6 +223,18 @@ export default function IntegrationsPage() {
       setGoogleConnection(null);
     } finally {
       setGoogleStatusLoading(false);
+    }
+  }, []);
+  const loadPaypalStatus = useCallback(async () => {
+    setPaypalStatusLoading(true);
+    try {
+      const { data } = await api.get<PaypalConnectionStatus>('/paypal/oauth/status');
+      setPaypalConnection(data);
+    } catch (err) {
+      console.error(err);
+      setPaypalConnection(null);
+    } finally {
+      setPaypalStatusLoading(false);
     }
   }, []);
 
@@ -237,25 +273,36 @@ export default function IntegrationsPage() {
 
   useEffect(() => {
     void loadGoogleStatus();
+    void loadPaypalStatus();
     void loadEvolutionStatus();
-  }, [loadGoogleStatus, loadEvolutionStatus]);
+  }, [loadGoogleStatus, loadPaypalStatus, loadEvolutionStatus]);
 
   useEffect(() => {
     if (!statusParam) {
       return;
     }
 
+    const integration = integrationParam ?? 'google';
     const type = statusParam === 'success' ? 'success' : 'error';
-    const message =
-      messageParam ??
-      (type === 'success'
+    const fallbackMessage =
+      integration === 'paypal'
+        ? type === 'success'
+          ? 'Conta PayPal conectada com sucesso.'
+          : 'Nao foi possivel concluir a conexao com o PayPal.'
+        : type === 'success'
         ? 'Conexao com o Google concluida com sucesso.'
-        : 'Nao foi possivel concluir a conexao com o Google.');
+        : 'Nao foi possivel concluir a conexao com o Google.';
+
+    const message = messageParam ?? fallbackMessage;
 
     setFeedback({ type, message });
 
     if (type === 'success') {
-      loadGoogleStatus();
+      if (integration === 'paypal') {
+        loadPaypalStatus();
+      } else {
+        loadGoogleStatus();
+      }
     }
 
     const timeout = setTimeout(() => {
@@ -263,7 +310,7 @@ export default function IntegrationsPage() {
     }, 150);
 
     return () => clearTimeout(timeout);
-  }, [statusParam, messageParam, router, loadGoogleStatus]);
+  }, [statusParam, messageParam, integrationParam, router, loadGoogleStatus, loadPaypalStatus]);
 
   const handleGoogleConnect = useCallback(async () => {
     if (!hasGoogleConfig) {
@@ -304,6 +351,30 @@ export default function IntegrationsPage() {
       setIsGoogleLoading(false);
     }
   }, [hasGoogleConfig, scopes]);
+  const handlePaypalConnect = useCallback(async () => {
+    setPaypalError(null);
+    setFeedback(null);
+    setIsPaypalLoading(true);
+
+    try {
+      const { data } = await api.post<PaypalOAuthStateResponse>('/paypal/oauth/state');
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('paypal_oauth_state', data.state);
+      }
+
+      if (!data.authorizeUrl) {
+        throw new Error('Authorize URL ausente na resposta da API.');
+      }
+
+      window.location.href = data.authorizeUrl;
+    } catch (err) {
+      console.error(err);
+      setPaypalError('Nao foi possivel iniciar a autorizacao com o PayPal. Tente novamente.');
+    } finally {
+      setIsPaypalLoading(false);
+    }
+  }, []);
 
   const stopEvolutionPolling = useCallback(() => {
     if (evolutionPollingRef.current) {
@@ -897,6 +968,71 @@ export default function IntegrationsPage() {
             Defina NEXT_PUBLIC_GOOGLE_CLIENT_ID e NEXT_PUBLIC_GOOGLE_REDIRECT_URI para habilitar a
             conexao.
           </p>
+        )}
+      </section>
+
+      <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">PayPal</h2>
+            <p className="mt-1 max-w-xl text-sm text-gray-500">
+              Conecte sua conta PayPal para sincronizar automaticamente os pagamentos recebidos e
+              consulta-los dentro do CRM.
+            </p>
+          </div>
+          <button
+            onClick={handlePaypalConnect}
+            disabled={isPaypalLoading}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            {isPaypalLoading
+              ? 'Redirecionando...'
+              : paypalConnection?.connected
+              ? 'Reconectar conta PayPal'
+              : 'Conectar conta PayPal'}
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          {paypalStatusLoading ? (
+            <span>Verificando status da integracao...</span>
+          ) : paypalConnection?.connected ? (
+            <div className="flex flex-col gap-1">
+              <strong className="text-emerald-700">Conta PayPal conectada</strong>
+              {paypalConnection.email && <span>Conta: {paypalConnection.email}</span>}
+              {paypalConnection.merchantId && <span>Merchant ID: {paypalConnection.merchantId}</span>}
+              {paypalConnection.expiresAt && (
+                <span>
+                  Token expira em:{' '}
+                  {new Date(paypalConnection.expiresAt).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short'
+                  })}
+                </span>
+              )}
+              <span>
+                Renovacao automatica:{' '}
+                {paypalConnection.hasRefreshToken ? 'ativada' : 'nao disponivel'}
+              </span>
+              {paypalConnection.lastSyncedAt && (
+                <span>
+                  Ultima sincronizacao:{' '}
+                  {new Date(paypalConnection.lastSyncedAt).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short'
+                  })}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span>{'Nenhuma conta PayPal vinculada. Clique em "Conectar conta PayPal".'}</span>
+          )}
+        </div>
+
+        {paypalError && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+            {paypalError}
+          </div>
         )}
       </section>
 
