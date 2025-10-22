@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
+import axios from 'axios';
 import { Appointment, Client, Payment } from '../../../types';
 
 type PaymentStatusOption = 'PENDING' | 'CONFIRMED' | 'FAILED' | 'REFUNDED';
@@ -147,11 +148,26 @@ export default function PaymentsPage() {
         params.status = statusFilter;
       }
       const response = await api.get<PaymentsResponse>('/payments', { params });
-      setPayments(response.data.data);
-      setTotal(response.data.total);
+      setPayments(response.data.data ?? []);
+      setTotal(response.data.total ?? 0);
     } catch (e) {
-      console.error(e);
-      setError('Nao foi possivel carregar os pagamentos.');
+      if (axios.isAxiosError(e)) {
+        const status = e.response?.status;
+        if (status === 404) {
+          setPayments([]);
+          setTotal(0);
+          setError(null);
+        } else {
+          const message =
+            (typeof e.response?.data === 'object' && e.response?.data !== null && 'message' in e.response.data
+              ? (e.response.data as { message?: string }).message
+              : undefined) ?? 'Nao foi possivel carregar os pagamentos.';
+          setError(message);
+        }
+      } else {
+        setError('Nao foi possivel carregar os pagamentos.');
+      }
+      console.error('Erro ao carregar pagamentos', e);
     } finally {
       setIsLoading(false);
     }
@@ -884,6 +900,7 @@ export default function PaymentsPage() {
     </div>
   );
 }
+
 
 
 
