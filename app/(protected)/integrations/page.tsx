@@ -58,6 +58,31 @@ type PaypalConnectionStatus = {
   payerId: string | null;
 };
 
+type MetaOAuthStateResponse = {
+  authorizeUrl: string;
+  state: string;
+  redirectUri: string;
+  expiresAt: string;
+  scope: string[];
+};
+
+type MetaConnectionStatus = {
+  connected: boolean;
+  email: string | null;
+  metaUserId: string | null;
+  metaUserName: string | null;
+  businessId: string | null;
+  businessName: string | null;
+  whatsappBusinessAccountId: string | null;
+  whatsappBusinessAccountName: string | null;
+  phoneNumberId: string | null;
+  phoneNumber: string | null;
+  scope: string | null;
+  expiresAt: string | null;
+  dataAccessExpiresAt: string | null;
+  lastSyncedAt: string | null;
+};
+
 type EvolutionQrPayload = {
   svg: string | null;
   base64: string | null;
@@ -97,22 +122,22 @@ const EVOLUTION_INSTANCE_PRESETS = [
   {
     id: 'slot1',
     name: 'ClinicaYance1',
-    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-v2-1'
+    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-evo-1'
   },
   {
     id: 'slot2',
     name: 'ClinicaYance2',
-    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-v2-2'
+    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-evo-2'
   },
   {
     id: 'slot3',
     name: 'ClinicaYance3',
-    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-v2-3'
+    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-evo-3'
   },
   {
     id: 'slot4',
     name: 'ClinicaYance4',
-    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-v2-4'
+    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-evo-4'
   }
 ] as const;
 const EVOLUTION_FIRST_POLL_DELAY = 30000;
@@ -130,6 +155,12 @@ export default function IntegrationsPage() {
   const [isPaypalLoading, setIsPaypalLoading] = useState(false);
   const [paypalStatusLoading, setPaypalStatusLoading] = useState(true);
   const [paypalConnection, setPaypalConnection] = useState<PaypalConnectionStatus | null>(null);
+
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [isMetaLoading, setIsMetaLoading] = useState(false);
+  const [metaStatusLoading, setMetaStatusLoading] = useState(true);
+  const [metaConnection, setMetaConnection] = useState<MetaConnectionStatus | null>(null);
+  const [isMetaDisconnecting, setIsMetaDisconnecting] = useState(false);
 
   const [evolutionInstances, setEvolutionInstances] = useState<EvolutionSession[]>([]);
   const [selectedEvolutionInstanceId, setSelectedEvolutionInstanceId] = useState<string | null>(null);
@@ -238,6 +269,19 @@ export default function IntegrationsPage() {
     }
   }, []);
 
+  const loadMetaStatus = useCallback(async () => {
+    setMetaStatusLoading(true);
+    try {
+      const { data } = await api.get<MetaConnectionStatus>('/meta/oauth/status');
+      setMetaConnection(data);
+    } catch (err) {
+      console.error(err);
+      setMetaConnection(null);
+    } finally {
+      setMetaStatusLoading(false);
+    }
+  }, []);
+
   const loadEvolutionStatus = useCallback(async (preferredInstanceId?: string | null) => {
     setEvolutionStatusLoading(true);
     try {
@@ -274,8 +318,9 @@ export default function IntegrationsPage() {
   useEffect(() => {
     void loadGoogleStatus();
     void loadPaypalStatus();
+    void loadMetaStatus();
     void loadEvolutionStatus();
-  }, [loadGoogleStatus, loadPaypalStatus, loadEvolutionStatus]);
+  }, [loadGoogleStatus, loadPaypalStatus, loadMetaStatus, loadEvolutionStatus]);
 
   useEffect(() => {
     if (!statusParam) {
@@ -289,6 +334,10 @@ export default function IntegrationsPage() {
         ? type === 'success'
           ? 'Conta PayPal conectada com sucesso.'
           : 'Nao foi possivel concluir a conexao com o PayPal.'
+        : integration === 'meta-whatsapp'
+        ? type === 'success'
+          ? 'Conta WhatsApp Business conectada com sucesso.'
+          : 'Nao foi possivel concluir a conexao com a Meta.'
         : type === 'success'
         ? 'Conexao com o Google concluida com sucesso.'
         : 'Nao foi possivel concluir a conexao com o Google.';
@@ -300,6 +349,8 @@ export default function IntegrationsPage() {
     if (type === 'success') {
       if (integration === 'paypal') {
         loadPaypalStatus();
+      } else if (integration === 'meta-whatsapp') {
+        loadMetaStatus();
       } else {
         loadGoogleStatus();
       }
@@ -310,7 +361,15 @@ export default function IntegrationsPage() {
     }, 150);
 
     return () => clearTimeout(timeout);
-  }, [statusParam, messageParam, integrationParam, router, loadGoogleStatus, loadPaypalStatus]);
+  }, [
+    statusParam,
+    messageParam,
+    integrationParam,
+    router,
+    loadGoogleStatus,
+    loadPaypalStatus,
+    loadMetaStatus
+  ]);
 
   const handleGoogleConnect = useCallback(async () => {
     if (!hasGoogleConfig) {
@@ -375,6 +434,50 @@ export default function IntegrationsPage() {
       setIsPaypalLoading(false);
     }
   }, []);
+
+  const handleMetaConnect = useCallback(async () => {
+    setMetaError(null);
+    setFeedback(null);
+    setIsMetaLoading(true);
+
+    try {
+      const { data } = await api.post<MetaOAuthStateResponse>('/meta/oauth/state');
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('meta_oauth_state', data.state);
+      }
+
+      if (!data.authorizeUrl) {
+        throw new Error('Authorize URL ausente na resposta da API.');
+      }
+
+      window.location.href = data.authorizeUrl;
+    } catch (err) {
+      console.error(err);
+      setMetaError('Nao foi possivel iniciar a autorizacao com a Meta. Tente novamente.');
+    } finally {
+      setIsMetaLoading(false);
+    }
+  }, []);
+
+  const handleMetaDisconnect = useCallback(async () => {
+    setMetaError(null);
+    setIsMetaDisconnecting(true);
+
+    try {
+      await api.delete('/meta/oauth/disconnect');
+      await loadMetaStatus();
+      setFeedback({
+        type: 'success',
+        message: 'Conexao com a Meta removida com sucesso.'
+      });
+    } catch (err) {
+      console.error(err);
+      setMetaError('Nao foi possivel remover a conexao com a Meta. Tente novamente.');
+    } finally {
+      setIsMetaDisconnecting(false);
+    }
+  }, [loadMetaStatus]);
 
   const stopEvolutionPolling = useCallback(() => {
     if (evolutionPollingRef.current) {
@@ -970,6 +1073,85 @@ export default function IntegrationsPage() {
           </p>
         )}
       </section>
+
+      {/* <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">WhatsApp Cloud (Meta)</h2>
+            <p className="mt-1 max-w-xl text-sm text-gray-500">
+              Permita que cada usuario conecte sua propria conta WhatsApp Business via Meta OAuth2,
+              mantendo os tokens seguros no CRM.
+            </p>
+          </div>
+          <button
+            onClick={handleMetaConnect}
+            disabled={isMetaLoading}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            {isMetaLoading
+              ? 'Redirecionando...'
+              : metaConnection?.connected
+              ? 'Reconectar conta Meta'
+              : 'Conectar conta Meta'}
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          {metaStatusLoading ? (
+            <span>Verificando status da integracao...</span>
+          ) : metaConnection?.connected ? (
+            <div className="flex flex-col gap-1">
+              <strong className="text-emerald-700">Conta Meta conectada</strong>
+              {metaConnection.metaUserName && (
+                <span>Usuario Meta: {metaConnection.metaUserName}</span>
+              )}
+              {metaConnection.email && <span>E-mail: {metaConnection.email}</span>}
+              {metaConnection.businessName && (
+                <span>Business Manager: {metaConnection.businessName}</span>
+              )}
+              {metaConnection.whatsappBusinessAccountName && (
+                <span>WABA: {metaConnection.whatsappBusinessAccountName}</span>
+              )}
+              {metaConnection.phoneNumber && <span>Numero: {metaConnection.phoneNumber}</span>}
+              {metaConnection.expiresAt && (
+                <span>
+                  Token expira em:{' '}
+                  {new Date(metaConnection.expiresAt).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short'
+                  })}
+                </span>
+              )}
+              {metaConnection.dataAccessExpiresAt && (
+                <span>
+                  Data access expira em:{' '}
+                  {new Date(metaConnection.dataAccessExpiresAt).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short'
+                  })}
+                </span>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={() => void handleMetaDisconnect()}
+                  disabled={isMetaDisconnecting}
+                  className="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+                >
+                  {isMetaDisconnecting ? 'Desconectando...' : 'Desconectar conta Meta'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <span>{'Nenhuma conta Meta vinculada. Clique em "Conectar conta Meta".'}</span>
+          )}
+        </div>
+
+        {metaError && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+            {metaError}
+          </div>
+        )}
+      </section> */}
 
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
