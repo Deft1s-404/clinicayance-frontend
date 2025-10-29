@@ -24,7 +24,7 @@ const statusLabels: Record<AppointmentStatusOption, string> = {
   BOOKED: 'Agendada',
   COMPLETED: 'Concluida',
   CANCELLED: 'Cancelada',
-  NO_SHOW: 'Nao compareceu'
+  NO_SHOW: 'Não compareceu'
 };
 
 const formatDateTime = (value: string) =>
@@ -94,14 +94,23 @@ export default function AppointmentsPage() {
     fetchClients();
   }, []);
 
+  // Converts an ISO date string to a value suitable for a `datetime-local` input (local time, YYYY-MM-DDTHH:mm)
+  const isoToLocalInput = (iso: string) => {
+    const d = new Date(iso);
+    // Adjust by timezone offset so that toISOString() yields local components
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  };
+
   const openModal = (appointment?: Appointment) => {
     if (appointment) {
       setEditingAppointmentId(appointment.id);
       setFormState({
         clientId: appointment.clientId,
         procedure: appointment.procedure,
-        start: appointment.start.slice(0, 16),
-        end: appointment.end.slice(0, 16),
+        // appointment.start/end come as ISO strings (UTC). Convert to local string for the input.
+        start: isoToLocalInput(appointment.start),
+        end: isoToLocalInput(appointment.end),
         status: appointment.status
       });
     } else {
@@ -419,4 +428,3 @@ export default function AppointmentsPage() {
     </div>
   );
 }
-

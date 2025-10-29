@@ -987,7 +987,7 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-semibold text-slate-900">Integracoes</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">Integrações</h1>
         <p className="mt-2 text-sm text-slate-500">
           Conecte a agenda do Google e o WhatsApp via Evolution para automatizar o atendimento.
         </p>
