@@ -1,6 +1,5 @@
-﻿'use client';
+'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -21,6 +20,7 @@ interface ClientFormState {
   name: string;
   email: string;
   phone: string;
+  address: string;
   source: string;
   status: string;
   tags: string;
@@ -29,7 +29,6 @@ interface ClientFormState {
   country: string;
   birthDate: string;
   language: string;
-  photos: string[];
   anamnesis: string;
 }
 
@@ -37,6 +36,7 @@ const emptyForm: ClientFormState = {
   name: '',
   email: '',
   phone: '',
+  address: '',
   source: '',
   status: 'NEW',
   tags: '',
@@ -45,26 +45,10 @@ const emptyForm: ClientFormState = {
   country: '',
   birthDate: '',
   language: '',
-  photos: [],
   anamnesis: ''
 };
 
 const PAGE_SIZE = 50;
-
-const formatDate = (value?: string | null) => {
-  if (!value) return undefined;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return new Intl.DateTimeFormat('pt-BR').format(date);
-};
-
-const readFileAsDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -114,7 +98,6 @@ export default function ClientsPage() {
         }
         const enrichedClients = response.data.data.map((client) => ({
           ...client,
-          intimateAssessmentPhotos: client.intimateAssessmentPhotos ?? [],
           anamnesisResponses: client.anamnesisResponses ?? null
         }));
         setClients(enrichedClients);
@@ -197,6 +180,7 @@ export default function ClientsPage() {
         name: client.name,
         email: client.email ?? '',
         phone: client.phone ?? '',
+        address: client.address ?? '',
         source: client.source ?? '',
         status: client.status,
         tags: client.tags.join(', '),
@@ -205,35 +189,13 @@ export default function ClientsPage() {
         country: client.country ?? '',
         birthDate: client.birthDate ? client.birthDate.slice(0, 10) : '',
         language: client.language ?? '',
-        photos: client.intimateAssessmentPhotos ?? [],
-        anamnesis: client.anamnesisResponses
-          ? JSON.stringify(client.anamnesisResponses, null, 2)
-          : ''
+        anamnesis: client.anamnesisResponses ? JSON.stringify(client.anamnesisResponses, null, 2) : ''
       });
     } else {
       setEditingClientId(null);
       resetForm();
     }
     setIsModalOpen(true);
-  };
-
-  const handleImageUpload = async (fileList: FileList | null) => {
-    if (!fileList?.length) return;
-    try {
-      const files = Array.from(fileList);
-      const dataUrls = await Promise.all(files.map(readFileAsDataUrl));
-      setFormState((prev) => ({ ...prev, photos: [...prev.photos, ...dataUrls] }));
-    } catch (uploadError) {
-      console.error(uploadError);
-      setError('Nao foi possivel ler as imagens selecionadas.');
-    }
-  };
-
-  const handleRemovePhoto = (index: number) => {
-    setFormState((prev) => ({
-      ...prev,
-      photos: prev.photos.filter((_, photoIndex) => photoIndex !== index)
-    }));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -254,6 +216,7 @@ export default function ClientsPage() {
       name: formState.name,
       email: formState.email || undefined,
       phone: formState.phone || undefined,
+      address: formState.address || undefined,
       source: formState.source || undefined,
       status: formState.status,
       notes: formState.notes || undefined,
@@ -261,7 +224,6 @@ export default function ClientsPage() {
       country: formState.country || undefined,
       birthDate: formState.birthDate || undefined,
       language: formState.language || undefined,
-      intimateAssessmentPhotos: formState.photos,
       anamnesisResponses: parsedAnamnesis,
       tags: formState.tags
         .split(',')
@@ -389,7 +351,7 @@ export default function ClientsPage() {
                   <td className="px-6 py-4 text-sm">
                     <div>{client.email}</div>
                     <div className="text-gray-400">{client.phone}</div>
-                    
+                    {client.address && <div className="text-gray-400">{client.address}</div>}
                   </td>
                   <td className="px-6 py-4">{client.source ?? '--'}</td>
                   <td className="px-6 py-4 font-semibold text-primary">{client.score}</td>
@@ -495,6 +457,15 @@ export default function ClientsPage() {
           </label>
 
           <label className="block text-sm">
+            Endereco
+            <input
+              value={formState.address}
+              onChange={(event) => setFormState((prev) => ({ ...prev, address: event.target.value }))}
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+            />
+          </label>
+
+          <label className="block text-sm">
             Origem
             <input
               value={formState.source}
@@ -566,45 +537,6 @@ export default function ClientsPage() {
             />
           </label>
 
-          <div className="md:col-span-2">
-            <span className="block text-sm font-medium text-gray-700">Imagens</span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(event) => handleImageUpload(event.target.files)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
-            />
-            {formState.photos.length > 0 && (
-              <div className="mt-3 space-y-2">
-                <p className="text-xs text-gray-500">
-                  {formState.photos.length} imagem(ns) anexada(s). Clique abaixo para remover.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {formState.photos.map((photo, index) => (
-                    <div key={index} className="relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200">
-                      <Image
-                        src={photo}
-                        alt={`Imagem ${index + 1}`}
-                        fill
-                        sizes="64px"
-                        unoptimized
-                        className="object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePhoto(index)}
-                        className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1 text-xs font-bold text-white"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           <div className="md:col-span-2 rounded-lg border border-gray-200 bg-white p-4">
             <span className="block text-sm font-medium text-gray-700">Ficha de anamnese</span>
             <p className="mt-1 text-xs text-gray-500">
@@ -675,3 +607,4 @@ export default function ClientsPage() {
     </div>
   );
 }
+

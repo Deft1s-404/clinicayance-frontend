@@ -10,6 +10,7 @@ export interface Client {
   name: string;
   email?: string | null;
   phone?: string | null;
+  address?: string | null;
   source?: string | null;
   tags: string[];
   score: number;
@@ -20,7 +21,6 @@ export interface Client {
   country?: string | null;
   birthDate?: string | null;
   language?: string | null;
-  intimateAssessmentPhotos: string[];
   anamnesisResponses?: Record<string, unknown> | null;
 }
 
@@ -36,6 +36,7 @@ export interface Lead {
     id: string;
     name: string;
     email?: string | null;
+    phone?: string | null;
   };
 }
 

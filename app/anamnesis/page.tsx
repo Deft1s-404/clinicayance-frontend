@@ -186,7 +186,6 @@ export default function AnamnesisPage() {
         source: 'Anamnese Geral (Web)',
         tags: [],
         notes: undefined,
-        intimateAssessmentPhotos: [],
         anamnesisResponses: buildAnamnesisPayload(form)
       };
 

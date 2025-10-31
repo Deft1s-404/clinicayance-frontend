@@ -122,22 +122,22 @@ const EVOLUTION_INSTANCE_PRESETS = [
   {
     id: 'slot1',
     name: 'ClinicaYance1',
-    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-evo-1'
+    webhookUrl: 'https://renovo-ia-n8n.ogy936.easypanel.host/webhook/clinica-yance-evo-1'
   },
   {
     id: 'slot2',
     name: 'ClinicaYance2',
-    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-evo-2'
+    webhookUrl: 'https://renovo-ia-n8n.ogy936.easypanel.host/webhook/clinica-yance-evo-2'
   },
   {
     id: 'slot3',
     name: 'ClinicaYance3',
-    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-evo-3'
+    webhookUrl: 'https://renovo-ia-n8n.ogy936.easypanel.host/webhook/clinica-yance-evo-3'
   },
   {
     id: 'slot4',
     name: 'ClinicaYance4',
-    webhookUrl: 'https://syc-bot-n8n.7pmr0u.easypanel.host/webhook/clinica-yance-evo-4'
+    webhookUrl: 'https://renovo-ia-n8n.ogy936.easypanel.host/webhook/clinica-yance-evo-4'
   }
 ] as const;
 const EVOLUTION_FIRST_POLL_DELAY = 30000;

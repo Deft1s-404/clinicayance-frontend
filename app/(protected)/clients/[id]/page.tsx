@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -36,7 +35,6 @@ interface ClientDetail extends Client {
   leads: LeadDetail[];
   appointments: AppointmentDetail[];
   payments: PaymentDetail[];
-  intimateAssessmentPhotos: string[];
   anamnesisResponses?: Record<string, unknown> | null;
 }
 
@@ -53,13 +51,20 @@ const formatDate = (value?: string | null) => {
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+const formatDateOnly = (value?: string | null) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(date);
+};
+
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  
 
   useEffect(() => {
     const id = params?.id;
@@ -72,7 +77,6 @@ export default function ClientDetailPage() {
         const data = response.data;
         setClient({
           ...data,
-          intimateAssessmentPhotos: data.intimateAssessmentPhotos ?? [],
           anamnesisResponses: data.anamnesisResponses ?? null
         });
       } catch (err) {
@@ -86,64 +90,19 @@ export default function ClientDetailPage() {
     void loadClient();
   }, [params?.id]);
 
-  useEffect(() => {
-    if (!selectedPhoto) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setSelectedPhoto(null);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [selectedPhoto]);
+  
 
   const anamnesisEntries = useMemo(() => {
     if (!client?.anamnesisResponses) return [];
     return Object.entries(client.anamnesisResponses);
   }, [client?.anamnesisResponses]);
 
-  const handleClosePreview = () => setSelectedPhoto(null);
+  
 
   return (
     <div className="min-h-screen bg-gray-100 py-10">
       <div className="mx-auto max-w-6xl space-y-8 px-4">
-        {selectedPhoto && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-            onClick={handleClosePreview}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="relative w-full max-w-4xl rounded-2xl bg-white p-4 shadow-2xl"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={handleClosePreview}
-                className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-sm font-medium text-white transition hover:bg-black/80"
-                aria-label="Fechar imagem"
-              >
-                X
-              </button>
-              <div className="relative mx-auto mt-6 h-[70vh] w-full">
-                <Image
-                  src={selectedPhoto}
-                  alt="Imagem selecionada"
-                  fill
-                  sizes="(min-width: 1024px) 1024px, 100vw"
-                  unoptimized
-                  className="object-contain"
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        
 
         <div className="flex items-center gap-4">
           <button
@@ -217,7 +176,7 @@ export default function ClientDetailPage() {
                 <DetailItem label="Idade" value={client.age != null ? `${client.age} anos` : '-'} />
                 <DetailItem label="País" value={client.country ?? '-'} />
                 <DetailItem label="Idioma" value={client.language ?? '-'} />
-                <DetailItem label="Data de nascimento" value={formatDate(client.birthDate)} />
+                <DetailItem label="Data de nascimento" value={formatDateOnly(client.birthDate)} />
                 <DetailItem label="Origem" value={client.source ?? '-'} />
               </div>
             </section>
@@ -255,36 +214,7 @@ export default function ClientDetailPage() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-800">Imagens anexadas</h3>
-              <p className="mb-6 text-sm text-gray-500">
-                URLs ou imagens adicionadas durante o cadastro.
-              </p>
-
-              {client.intimateAssessmentPhotos.length === 0 ? (
-                <p className="text-sm text-gray-500">Nenhuma imagem registrada.</p>
-              ) : (
-                <div className="flex flex-wrap gap-4">
-                  {client.intimateAssessmentPhotos.map((url, index) => (
-                    <button
-                      key={`${url}-${index}`}
-                      type="button"
-                      onClick={() => setSelectedPhoto(url)}
-                      className="group relative block h-28 w-28 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                    >
-                      <span className="sr-only">Ampliar imagem</span>
-                      <Image
-                        src={url}
-                        alt={`Imagem ${index + 1}`}
-                        fill
-                        unoptimized
-                        className="object-cover transition group-hover:scale-105"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
+            
 
             <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-800">Leads</h3>

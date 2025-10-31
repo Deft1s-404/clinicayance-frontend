@@ -25,6 +25,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
   const [selectedStage, setSelectedStage] = useState<string>('');
+  const [selectedSource, setSelectedSource] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,13 +43,16 @@ export default function LeadsPage() {
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [isClientSearchLoading, setIsClientSearchLoading] = useState(false);
 
-  const fetchLeads = async (stageFilter?: string) => {
+  const fetchLeads = async (stageFilter?: string, sourceFilter?: string) => {
     try {
       setIsLoading(true);
       setError(null);
       const params: Record<string, unknown> = { limit: 100 };
       if (stageFilter) {
         params.stage = stageFilter;
+      }
+      if (sourceFilter) {
+        params.source = sourceFilter;
       }
       const response = await api.get<LeadsResponse>('/leads', { params });
       setLeads(response.data.data);
@@ -209,6 +213,33 @@ export default function LeadsPage() {
     setLeadPendingDeletion(null);
   };
 
+  const handleExportCsv = async () => {
+    try {
+      setError(null);
+      const response = await api.get('/leads/export', {
+        params: {
+          stage: selectedStage || undefined,
+          source: selectedSource || undefined
+        },
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const cd = (response.headers['content-disposition'] as string | undefined) ?? '';
+      const match = /filename="?([^";]+)"?/i.exec(cd);
+      a.href = url;
+      a.download = match?.[1] ?? 'leads_export.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      setError('Erro ao exportar CSV.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -222,7 +253,7 @@ export default function LeadsPage() {
             onChange={(event) => {
               const stage = event.target.value;
               setSelectedStage(stage);
-              fetchLeads(stage || undefined);
+              fetchLeads(stage || undefined, selectedSource || undefined);
             }}
             className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
           >
@@ -233,6 +264,28 @@ export default function LeadsPage() {
               </option>
             ))}
           </select>
+          <select
+            value={selectedSource}
+            onChange={(event) => {
+              const source = event.target.value;
+              setSelectedSource(source);
+              fetchLeads(selectedStage || undefined, source || undefined);
+            }}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          >
+            <option value="">Todas as origens</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="indicacao">Indicação</option>
+            <option value="site">Site</option>
+            <option value="whatsapp">WhatsApp</option>
+          </select>
+          <button
+            onClick={handleExportCsv}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+          >
+            Exportar CSV
+          </button>
           <button
             onClick={() => openModal()}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
@@ -278,6 +331,7 @@ export default function LeadsPage() {
                   <td className="px-6 py-4">
                     <p className="font-semibold">{lead.client?.name}</p>
                     <p className="text-xs text-gray-400">{lead.client?.email}</p>
+                    <p className="text-xs text-gray-400">{lead.client?.phone}</p>
                   </td>
                   <td className="px-6 py-4">{lead.source ?? '—'}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{lead.notes ?? '—'}</td>
@@ -366,11 +420,18 @@ export default function LeadsPage() {
 
           <label className="text-sm">
             Origem
-            <input
+            <select
               value={formState.source}
               onChange={(event) => setFormState((prev) => ({ ...prev, source: event.target.value }))}
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
-            />
+            >
+              <option value="">Selecione a origem</option>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="indicacao">Indicação</option>
+              <option value="site">Site</option>
+              <option value="whatsapp">WhatsApp</option>
+            </select>
           </label>
 
           <label className="text-sm">

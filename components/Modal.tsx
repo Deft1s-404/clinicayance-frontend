@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const sizeClassMap = {
   md: 'max-w-3xl',
@@ -29,19 +30,31 @@ export const Modal = ({
   className = '',
   closeOnBackdrop = false
 }: ModalProps) => {
-  if (!isOpen) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) {
     return null;
   }
 
   const containerClasses = `w-full ${sizeClassMap[size]} max-h-[85vh] overflow-hidden rounded-2xl bg-white shadow-2xl ${className}`.trim();
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={closeOnBackdrop ? onClose : undefined}
       role="presentation"
     >
-      <div className={`${containerClasses} flex flex-col`} onClick={(event) => event.stopPropagation()} role="dialog">
+      <div
+        className={`${containerClasses} flex flex-col`}
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="flex items-center justify-between gap-4 border-b border-gray-100 px-6 py-4">
           <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
           <button
@@ -56,6 +69,7 @@ export const Modal = ({
           <div className="space-y-4">{children}</div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

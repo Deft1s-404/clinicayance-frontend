@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -25,7 +26,13 @@ export function ConfirmDialog({
   isConfirmLoading = false,
   tone = 'danger'
 }: ConfirmDialogProps) {
-  if (!isOpen) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) {
     return null;
   }
 
@@ -34,8 +41,8 @@ export function ConfirmDialog({
       ? 'bg-red-500 hover:bg-red-600 focus-visible:ring-red-400'
       : 'bg-primary hover:bg-primary-dark focus-visible:ring-primary/60';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
         <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
         {description && <div className="mt-3 text-sm text-gray-600">{description}</div>}
@@ -57,7 +64,8 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
