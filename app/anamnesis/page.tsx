@@ -186,7 +186,8 @@ export default function AnamnesisPage() {
         birthDate: form.birthDate || undefined,
         language: form.language || undefined,
         source: 'WhatsApp',
-        interest: form.interest || undefined,`n        tags: form.interest ? [form.interest] : [],
+        interest: form.interest || undefined,
+        tags: form.interest ? [form.interest] : [],
         notes: undefined,
         anamnesisResponses: buildAnamnesisPayload(form)
       };
