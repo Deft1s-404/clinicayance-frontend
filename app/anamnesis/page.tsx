@@ -15,6 +15,7 @@ interface ClientForm {
   howDidYouKnow: string;
   referredBy: string;
   selfEsteem: string;
+  interest: string;
   consent: boolean;
   formDate: string;
   signature: string;
@@ -86,6 +87,7 @@ const initialForm: ClientForm = {
   howDidYouKnow: howDidYouKnowOptions[0],
   referredBy: '',
   selfEsteem: '5',
+  interest: '',
   consent: false,
   formDate: '',
   signature: '',
@@ -183,8 +185,8 @@ export default function AnamnesisPage() {
         country: form.country || undefined,
         birthDate: form.birthDate || undefined,
         language: form.language || undefined,
-        source: 'Anamnese Geral (Web)',
-        tags: [],
+        source: 'WhatsApp',
+        interest: form.interest || undefined,`n        tags: form.interest ? [form.interest] : [],
         notes: undefined,
         anamnesisResponses: buildAnamnesisPayload(form)
       };
@@ -343,7 +345,17 @@ export default function AnamnesisPage() {
                   className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
                   type="number"
                   min={0}
-                  max={10}
+                max={10}
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-gray-600">
+                Interesse
+                <input
+                  value={form.interest}
+                  onChange={(event) => updateField('interest', event.target.value as string)}
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  placeholder="Ex.: botox, harmonizacao"
                 />
               </label>
             </div>
@@ -363,20 +375,27 @@ export default function AnamnesisPage() {
                 >
                   <p className="text-sm font-medium text-gray-600">{question}</p>
                   <div className="flex gap-3">
-                    {yesNoOptions.map((option) => (
-                      <label
-                        key={option}
-                        className="flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition "
-                      >
-                        <input
-                          type="radio"
-                          className="hidden"
-                          checked={form.habits[question] === option}
-                          onChange={() => handleRadioChange('habits', question, option)}
-                        />
-                        {option}
-                      </label>
-                    ))}
+                    {yesNoOptions.map((option) => {
+                      const selected = form.habits[question] === option;
+                      return (
+                        <label
+                          key={option}
+                          className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                            selected
+                              ? 'border-[#45b39d] bg-[#45b39d] text-white'
+                              : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            className="hidden"
+                            checked={selected}
+                            onChange={() => handleRadioChange('habits', question, option)}
+                          />
+                          {option}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -415,20 +434,27 @@ export default function AnamnesisPage() {
                 >
                   <p className="text-sm font-medium text-gray-600">{question}</p>
                   <div className="flex gap-3">
-                    {yesNoOptions.map((option) => (
-                      <label
-                        key={option}
-                        className="flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition "
-                      >
-                        <input
-                          type="radio"
-                          className="hidden"
-                          checked={form.medical[question] === option}
-                          onChange={() => handleRadioChange('medical', question, option)}
-                        />
-                        {option}
-                      </label>
-                    ))}
+                    {yesNoOptions.map((option) => {
+                      const selected = form.medical[question] === option;
+                      return (
+                        <label
+                          key={option}
+                          className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                            selected
+                              ? 'border-[#45b39d] bg-[#45b39d] text-white'
+                              : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            className="hidden"
+                            checked={selected}
+                            onChange={() => handleRadioChange('medical', question, option)}
+                          />
+                          {option}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -499,20 +525,27 @@ export default function AnamnesisPage() {
                 >
                   <p className="text-sm font-medium text-gray-600">{question}</p>
                   <div className="flex gap-3">
-                    {yesNoOptions.map((option) => (
-                      <label
-                        key={option}
-                        className="flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition "
-                      >
-                        <input
-                          type="radio"
-                          className="hidden"
-                          checked={form.medical[question] === option}
-                          onChange={() => handleRadioChange('medical', question, option)}
-                        />
-                        {option}
-                      </label>
-                    ))}
+                    {yesNoOptions.map((option) => {
+                      const selected = form.medical[question] === option;
+                      return (
+                        <label
+                          key={option}
+                          className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                            selected
+                              ? 'border-[#45b39d] bg-[#45b39d] text-white'
+                              : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            className="hidden"
+                            checked={selected}
+                            onChange={() => handleRadioChange('medical', question, option)}
+                          />
+                          {option}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -571,6 +604,10 @@ export default function AnamnesisPage() {
     </div>
   );
 }
+
+
+
+
 
 
 
