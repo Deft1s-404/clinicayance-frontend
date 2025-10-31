@@ -457,7 +457,7 @@ export default function ClientsPage() {
           </label>
 
           <label className="block text-sm">
-            Endereco
+            Endereço
             <input
               value={formState.address}
               onChange={(event) => setFormState((prev) => ({ ...prev, address: event.target.value }))}
