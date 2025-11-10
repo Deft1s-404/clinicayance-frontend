@@ -5,10 +5,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Atualiza paleta primária para o dourado da marca
         primary: {
-          DEFAULT: '#28A17B',
-          dark: '#1f7f63',
-          light: '#5cd3aa'
+          DEFAULT: '#d4b26e',
+          dark: '#b8924a',
+          light: '#ead9ae'
         },
         slate: {
           950: '#0f172a'

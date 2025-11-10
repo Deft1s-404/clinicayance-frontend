@@ -17,8 +17,12 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+      <div className="md:flex md:h-screen">
+        <Navbar />
+        <main className="px-4 py-6 md:flex-1 md:overflow-y-auto md:px-6 md:py-8">
+          <div className="mx-auto max-w-7xl">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

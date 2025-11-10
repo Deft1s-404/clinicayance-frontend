@@ -122,7 +122,7 @@ export default function DashboardPage() {
                     `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                   }
                 />
-                <Line type="monotone" dataKey="total" stroke="#1f7f63" strokeWidth={3} dot />
+                <Line type="monotone" dataKey="total" stroke="#d4b26e" strokeWidth={3} dot />
               </LineChart>
             </ResponsiveContainer>
           </div>

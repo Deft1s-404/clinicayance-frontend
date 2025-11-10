@@ -169,8 +169,8 @@ export default function ReportsPage() {
               <AreaChart data={revenueReport?.series ?? []}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1f7f63" stopOpacity={0.6} />
-                    <stop offset="95%" stopColor="#1f7f63" stopOpacity={0.05} />
+                    <stop offset="5%" stopColor="#d4b26e" stopOpacity={0.6} />
+                    <stop offset="95%" stopColor="#d4b26e" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -184,7 +184,7 @@ export default function ReportsPage() {
                 <Area
                   type="monotone"
                   dataKey="total"
-                  stroke="#1f7f63"
+                  stroke="#d4b26e"
                   fill="url(#colorRevenue)"
                   strokeWidth={3}
                 />
@@ -202,7 +202,7 @@ export default function ReportsPage() {
                 <XAxis dataKey="label" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip />
-                <Bar dataKey="total" fill="#1f7f63" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="total" fill="#d4b26e" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

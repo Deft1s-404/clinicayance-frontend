@@ -108,6 +108,8 @@ type EvolutionGenerateQrRequest = {
   number?: string;
 };
 
+ 
+
 const resolveQrImageSource = (value?: string | null) => {
   if (!value) {
     return null;
@@ -141,6 +143,8 @@ const EVOLUTION_INSTANCE_PRESETS = [
   }
 ] as const;
 const EVOLUTION_FIRST_POLL_DELAY = 30000;
+
+ 
 
 export default function IntegrationsPage() {
   const router = useRouter();
@@ -187,10 +191,14 @@ export default function IntegrationsPage() {
   const evolutionModalCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousEvolutionStatus = useRef<EvolutionSession['status'] | null>(null);
 
+  
+
   const updateSelectedEvolutionInstanceId = useCallback((id: string | null) => {
     selectedEvolutionInstanceIdRef.current = id;
     setSelectedEvolutionInstanceId(id);
   }, []);
+
+  
 
   const scopes = useMemo(
     () => normalizeScopes(process.env.NEXT_PUBLIC_GOOGLE_OAUTH_SCOPES),
@@ -206,6 +214,8 @@ export default function IntegrationsPage() {
     }
     return names;
   }, [evolutionInstances]);
+
+  
 
   const evolutionSlotAssignments = useMemo(() => {
     const assignments = new Map<string, EvolutionSession>();
@@ -235,6 +245,12 @@ export default function IntegrationsPage() {
   );
 
   const hasGoogleConfig = clientId.length > 0 && fallbackRedirectUri.length > 0;
+
+  
+
+  
+
+  
 
   const statusParam = searchParams.get('status');
   const messageParam = searchParams.get('message');
@@ -314,6 +330,8 @@ export default function IntegrationsPage() {
       setEvolutionStatusLoading(false);
     }
   }, [updateSelectedEvolutionInstanceId]);
+
+  
 
   useEffect(() => {
     void loadGoogleStatus();
@@ -497,12 +515,7 @@ export default function IntegrationsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    return () => {
-      stopEvolutionPolling();
-      clearEvolutionModalAutoClose();
-    };
-  }, [clearEvolutionModalAutoClose, stopEvolutionPolling]);
+  // cleanup will be registered below after both stop* callbacks are declared
 
   const pollEvolutionStatus = useCallback(async (instanceId: string) => {
     try {
@@ -518,6 +531,18 @@ export default function IntegrationsPage() {
       console.error(err);
     }
   }, []);
+
+  
+
+  // Register global cleanup once both stop callbacks exist
+  useEffect(() => {
+    return () => {
+      stopEvolutionPolling();
+      clearEvolutionModalAutoClose();
+    };
+  }, [clearEvolutionModalAutoClose, stopEvolutionPolling]);
+
+  
 
   const handleEvolutionConnect = useCallback(
     async (target?: EvolutionSession) => {
@@ -616,6 +641,31 @@ export default function IntegrationsPage() {
     },
     [evolutionSlotAssignments, setFeedback, usedEvolutionSlots]
   );
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
 
   const handleEvolutionCreateSlotChange = useCallback(
     (slotId: string) => {
@@ -887,6 +937,8 @@ export default function IntegrationsPage() {
     stopEvolutionPolling
   ]);
 
+  
+
   useEffect(() => {
     const currentStatus = evolutionSession?.status ?? null;
     const previousStatus = previousEvolutionStatus.current;
@@ -1011,6 +1063,7 @@ export default function IntegrationsPage() {
           </button>
         </div>
       )}
+
 
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1648,12 +1701,3 @@ export default function IntegrationsPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-

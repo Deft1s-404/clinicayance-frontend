@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { FormEvent, useState } from 'react';
 
 import { useAuth } from '../../../hooks/useAuth';
@@ -27,60 +28,104 @@ export default function LoginPage() {
   const disabled = submitting || loading;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 to-white">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl bg-white p-10 shadow-xl"
+    <div
+      className="relative min-h-screen overflow-hidden login-hero"
+      style={{
+        backgroundImage: "url('/bg.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Decorative background */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          backgroundImage:
+            'linear-gradient(135deg, rgba(251,250,247,0.85) 0%, rgba(255,255,255,0.9) 60%), radial-gradient(80% 60% at 8% 55%, rgba(239,233,220,0.6) 0%, rgba(239,233,220,0.2) 60%, rgba(239,233,220,0) 61%), radial-gradient(50% 35% at 95% 70%, rgba(234,223,201,0.5) 0%, rgba(234,223,201,0.2) 55%, rgba(234,223,201,0) 56%), url(/bg.png)',
+          backgroundSize: 'auto, auto, auto, cover',
+          backgroundPosition: 'center, center, center, center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
+
+      {/* Brand */}
+      <div className="absolute left-6 top-6 flex items-center gap-3">
+        <Image src="/image.png" alt="Marca Clínica Yance" width={100} height={100} />
+        <span className="text-3xl font-serif text-primary">Clínica Yance</span>
+      </div>
+
+      {/* Help */}
+      <a
+        href="#"
+        className="absolute right-6 top-6 rounded-full bg-primary px-6 py-2 text-sm font-semibold text-white shadow-sm hover:text-white"
       >
-        <h1 className="mb-2 text-3xl font-semibold text-slate-900">Clínica Yance CRM</h1>
-        <p className="mb-8 text-sm text-gray-500">
-          Faça login para acessar o dashboard da clínica estética.
-        </p>
+        Ajuda
+      </a>
 
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        <label className="mb-4 block">
-          <span className="mb-1 block text-sm font-medium text-gray-700">E-mail</span>
-          <input
-            type="email"
-            required
-            value={formState.email}
-            onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 transition focus:border-primary focus:bg-white focus:outline-none"
-            placeholder="admin@clinicayance.com"
-          />
-        </label>
-
-        <label className="mb-6 block">
-          <span className="mb-1 block text-sm font-medium text-gray-700">Senha</span>
-          <input
-            type="password"
-            required
-            value={formState.password}
-            onChange={(event) =>
-              setFormState((prev) => ({ ...prev, password: event.target.value }))
-            }
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 transition focus:border-primary focus:bg-white focus:outline-none"
-            placeholder="••••••"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={disabled}
-          className="w-full rounded-lg bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
+      {/* Card */}
+      <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4">
+        <form
+          onSubmit={onSubmit}
+          className="w-full max-w-xl rounded-[24px] border-2 border-primary bg-white/95 p-10 shadow-lg"
         >
-          {submitting ? 'Entrando...' : 'Entrar'}
-        </button>
+          <div className="mb-4 flex justify-center">
+            <Image src="/image.png" alt="Marca Clínica Yance" width={100} height={100} />
+          </div>
+          <h1 className="mb-3 text-center text-3xl font-semibold text-slate-900">
+            Clínica Yance CRM
+          </h1>
+          <p className="mb-8 text-center text-base text-gray-600">
+            Faça login para acessar o dashboard da clínica estética.
+          </p>
 
-        {/* <p className="mt-6 text-center text-xs text-gray-400">
-          Usuário padrão: admin@clinicayance.com / senha: admin123
-        </p> */}
-      </form>
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <input
+              type="email"
+              required
+              value={formState.email}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, email: event.target.value }))
+              }
+              className="w-full rounded-full border-2 border-primary bg-white px-6 py-3 text-slate-900 placeholder:font-semibold placeholder:text-primary focus:outline-none caret-primary"
+              placeholder="E-mail"
+            />
+
+            <input
+              type="password"
+              required
+              value={formState.password}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, password: event.target.value }))
+              }
+              className="w-full rounded-full border-2 border-primary bg-white px-6 py-3 text-slate-900 placeholder:font-semibold placeholder:text-primary focus:outline-none caret-primary"
+              placeholder="Senha"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={disabled}
+            className="mt-6 w-full rounded-full bg-primary px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {submitting ? 'Entrando...' : 'Entrar'}
+          </button>
+
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Esqueceu a senha?{' '}
+            <a href="#" className="underline text-primary">
+              Clique aqui.
+            </a>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }

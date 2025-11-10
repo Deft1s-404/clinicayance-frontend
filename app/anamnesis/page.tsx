@@ -245,7 +245,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.name}
                   onChange={(event) => updateField('name', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Nome completo"
                   required
                 />
@@ -256,7 +256,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.email}
                   onChange={(event) => updateField('email', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   type="email"
                   placeholder="nome@exemplo.com"
                 />
@@ -267,7 +267,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.contact}
                   onChange={(event) => updateField('contact', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="(00) 00000-0000"
                 />
               </label>
@@ -277,7 +277,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.age}
                   onChange={(event) => updateField('age', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   type="number"
                   min={0}
                 />
@@ -288,7 +288,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.country}
                   onChange={(event) => updateField('country', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Ex.: Brasil"
                 />
               </label>
@@ -298,7 +298,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.birthDate}
                   onChange={(event) => updateField('birthDate', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   type="date"
                 />
               </label>
@@ -308,7 +308,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.language}
                   onChange={(event) => updateField('language', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Idioma principal"
                 />
               </label>
@@ -323,7 +323,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.howDidYouKnow}
                   onChange={(event) => updateField('howDidYouKnow', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Escolha ou descreva"
                 />
               </label>
@@ -333,7 +333,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.referredBy}
                   onChange={(event) => updateField('referredBy', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Se houver, informe quem indicou"
                 />
               </label>
@@ -343,7 +343,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.selfEsteem}
                   onChange={(event) => updateField('selfEsteem', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   type="number"
                   min={0}
                 max={10}
@@ -355,7 +355,7 @@ export default function AnamnesisPage() {
                 <input
                   value={form.interest}
                   onChange={(event) => updateField('interest', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Ex.: botox, harmonizacao"
                 />
               </label>
@@ -383,7 +383,7 @@ export default function AnamnesisPage() {
                           key={option}
                           className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
                             selected
-                              ? 'border-[#45b39d] bg-[#45b39d] text-white'
+                              ? 'border-primary bg-primary text-white'
                               : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
                           }`}
                         >
@@ -414,7 +414,7 @@ export default function AnamnesisPage() {
                       event.target.value as string
                     )
                   }
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Descreva brevemente"
                 />
               </label>
@@ -442,7 +442,7 @@ export default function AnamnesisPage() {
                           key={option}
                           className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
                             selected
-                              ? 'border-[#45b39d] bg-[#45b39d] text-white'
+                              ? 'border-primary bg-primary text-white'
                               : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
                           }`}
                         >
@@ -473,7 +473,7 @@ export default function AnamnesisPage() {
                       event.target.value as string
                     )
                   }
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Detalhe a medicação e a frequência"
                 />
               </label>
@@ -485,7 +485,7 @@ export default function AnamnesisPage() {
                   onChange={(event) =>
                     handleAdditionalChange('medicalAdditional', 'Diabetes (Tipo)', event.target.value as string)
                   }
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Tipo 1, Tipo 2, gestacional, etc."
                 />
               </label>
@@ -501,7 +501,7 @@ export default function AnamnesisPage() {
                       event.target.value as string
                     )
                   }
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   placeholder="Informe a região onde foi aplicado"
                 />
               </label>
@@ -533,7 +533,7 @@ export default function AnamnesisPage() {
                           key={option}
                           className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold transition ${
                             selected
-                              ? 'border-[#45b39d] bg-[#45b39d] text-white'
+                              ? 'border-primary bg-primary text-white'
                               : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
                           }`}
                         >
@@ -556,7 +556,7 @@ export default function AnamnesisPage() {
                   type="checkbox"
                   checked={form.consent}
                   onChange={(event) => updateField('consent', event.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-[#45b39d] focus:ring-[#45b39d]"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   required
                 />
                 Autorizo o uso de meus dados e imagem conforme a política da clínica.
@@ -568,7 +568,7 @@ export default function AnamnesisPage() {
                   type="date"
                   value={form.formDate}
                   onChange={(event) => updateField('formDate', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                 />
               </label>
 
@@ -577,7 +577,7 @@ export default function AnamnesisPage() {
                 <textarea
                   value={form.signature}
                   onChange={(event) => updateField('signature', event.target.value as string)}
-                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-[#45b39d] focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-4 py-2 focus:border-primary focus:outline-none"
                   rows={3}
                   placeholder="Digite seu nome completo para validar a assinatura digital."
                 />
@@ -596,7 +596,7 @@ export default function AnamnesisPage() {
           <button
             type="submit"
             disabled={isSubmitting || !form.consent}
-            className="w-full rounded-xl bg-[#45b39d] px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-[#379682] disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSubmitting ? 'Enviando...' : 'Enviar formulário'}
           </button>
