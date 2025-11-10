@@ -110,13 +110,20 @@ export default function LoginPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={disabled}
-            className="mt-6 w-full rounded-full bg-primary px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {submitting ? 'Entrando...' : 'Entrar'}
-          </button>
+        <button
+          type="submit"
+          disabled={disabled}
+          className="mt-6 w-full rounded-full bg-primary px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {submitting ? 'Entrando...' : 'Entrar'}
+        </button>
+
+        <a
+          href="/register"
+          className="mt-3 block w-full rounded-full border-2 border-primary px-6 py-3 text-center font-semibold text-primary transition hover:bg-primary/10"
+        >
+          Criar conta
+        </a>
 
           <p className="mt-6 text-center text-sm text-gray-500">
             Esqueceu a senha?{' '}
