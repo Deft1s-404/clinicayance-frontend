@@ -120,7 +120,7 @@ export default function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-gray-500">
             Esqueceu a senha?{' '}
-            <a href="#" className="underline text-primary">
+            <a href="/forgot-password" className="underline text-primary">
               Clique aqui.
             </a>
           </p>
