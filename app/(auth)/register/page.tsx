@@ -2,15 +2,17 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 import api from '../../../lib/api';
-import { useAuth } from '../../../hooks/useAuth';
 
 export default function RegisterPage() {
-  const { login } = useAuth();
+  const router = useRouter();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,7 +24,8 @@ export default function RegisterPage() {
     setError(null);
     try {
       await api.post('/auth/register', { name: form.name, email: form.email, password: form.password });
-      await login(form.email, form.password);
+      setDone(true);
+      setTimeout(() => router.push('/login'), 1500);
     } catch (err) {
       setError('Não foi possível criar a conta. Verifique os dados.');
     } finally {
@@ -31,13 +34,50 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 to-white px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-md rounded-2xl bg-white p-8 shadow">
-        <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Criar conta</h1>
-        <p className="mb-6 text-center text-sm text-gray-500">Preencha os campos para cadastrar um novo usuário.</p>
+    <div
+      className="relative min-h-screen overflow-hidden login-hero"
+      style={{
+        backgroundImage: "url('/bg.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Decorative background */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          backgroundImage:
+            'linear-gradient(135deg, rgba(251,250,247,0.85) 0%, rgba(255,255,255,0.9) 60%), radial-gradient(80% 60% at 8% 55%, rgba(239,233,220,0.6) 0%, rgba(239,233,220,0.2) 60%, rgba(239,233,220,0) 61%), radial-gradient(50% 35% at 95% 70%, rgba(234,223,201,0.5) 0%, rgba(234,223,201,0.2) 55%, rgba(234,223,201,0) 56%), url(/bg.png)',
+          backgroundSize: 'auto, auto, auto, cover',
+          backgroundPosition: 'center, center, center, center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
 
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>
+      {/* Brand */}
+      <div className="absolute left-6 top-6 flex items-center gap-3">
+        <Image src="/image.png" alt="Marca Clínica Yance" width={100} height={100} />
+        <span className="text-3xl font-serif text-primary">Clínica Yance</span>
+      </div>
+
+      <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4">
+        <form onSubmit={onSubmit} className="w-full max-w-xl rounded-[24px] border-2 border-primary bg-white/95 p-10 shadow-lg">
+          <div className="mb-4 flex justify-center">
+            <Image src="/image.png" alt="Marca Clínica Yance" width={100} height={100} />
+          </div>
+          <h1 className="mb-2 text-center text-3xl font-semibold text-slate-900">Criar conta</h1>
+          <p className="mb-6 text-center text-sm text-gray-500">Preencha os campos para cadastrar um novo usuário.</p>
+
+        {done ? (
+          <div className="mb-4 rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
+            Conta criada com sucesso. Redirecionando para o login…
+          </div>
+        ) : (
+          error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>
+          )
         )}
 
         <label className="mb-4 block text-sm font-medium text-gray-700">
@@ -88,22 +128,26 @@ export default function RegisterPage() {
           />
         </label>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-lg bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {submitting ? 'Criando...' : 'Criar conta'}
-        </button>
+          {!done && (
+            <>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-full bg-primary px-6 py-3 font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {submitting ? 'Criando...' : 'Criar conta'}
+              </button>
 
-        <p className="mt-4 text-center text-xs text-gray-500">
-          Já tem conta?{' '}
-          <Link className="underline" href="/login">
-            Entrar
-          </Link>
-        </p>
-      </form>
+              <p className="mt-4 text-center text-xs text-gray-500">
+                Já tem conta?{' '}
+                <Link className="underline" href="/login">
+                  Entrar
+                </Link>
+              </p>
+            </>
+          )}
+        </form>
+      </div>
     </div>
   );
 }
-
