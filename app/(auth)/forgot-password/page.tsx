@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 import api from '../../../lib/api';
 
@@ -26,12 +27,43 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 to-white px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-md rounded-2xl bg-white p-8 shadow">
-        <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Recuperar senha</h1>
-        <p className="mb-6 text-center text-sm text-gray-500">
-          Informe o e-mail da sua conta para receber um link de redefinição de senha.
-        </p>
+    <div
+      className="relative min-h-screen overflow-hidden login-hero"
+      style={{
+        backgroundImage: "url('/bg.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Decorative background */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          backgroundImage:
+            'linear-gradient(135deg, rgba(251,250,247,0.85) 0%, rgba(255,255,255,0.9) 60%), radial-gradient(80% 60% at 8% 55%, rgba(239,233,220,0.6) 0%, rgba(239,233,220,0.2) 60%, rgba(239,233,220,0) 61%), radial-gradient(50% 35% at 95% 70%, rgba(234,223,201,0.5) 0%, rgba(234,223,201,0.2) 55%, rgba(234,223,201,0) 56%), url(/bg.png)',
+          backgroundSize: 'auto, auto, auto, cover',
+          backgroundPosition: 'center, center, center, center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
+
+      {/* Brand */}
+      <div className="absolute left-6 top-6 flex items-center gap-3">
+        <Image src="/image.png" alt="Marca Clínica Yance" width={100} height={100} />
+        <span className="text-3xl font-serif text-primary">Clínica Yance</span>
+      </div>
+
+      <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4">
+        <form onSubmit={onSubmit} className="w-full max-w-xl rounded-[24px] border-2 border-primary bg-white/95 p-10 shadow-lg">
+          <div className="mb-4 flex justify-center">
+            <Image src="/image.png" alt="Marca Clínica Yance" width={100} height={100} />
+          </div>
+          <h1 className="mb-2 text-center text-3xl font-semibold text-slate-900">Recuperar senha</h1>
+          <p className="mb-6 text-center text-sm text-gray-500">
+            Informe o e-mail da sua conta para receber um link de redefinição de senha.
+          </p>
 
         {sent ? (
           <div className="space-y-4">
@@ -63,7 +95,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-lg bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-full bg-primary px-6 py-3 font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
             >
               {submitting ? 'Enviando...' : 'Enviar link'}
             </button>
@@ -74,8 +106,8 @@ export default function ForgotPasswordPage() {
             </p>
           </>
         )}
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
-
