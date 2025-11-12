@@ -1,13 +1,13 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, Suspense, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import api from '../../../lib/api';
 
-export default function ResetPasswordPage() {
+function ResetPasswordPageInner() {
   const params = useSearchParams();
   const router = useRouter();
   const emailFromQuery = params.get('email') ?? '';
@@ -137,5 +137,13 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div />}> 
+      <ResetPasswordPageInner />
+    </Suspense>
   );
 }
