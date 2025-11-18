@@ -24,6 +24,17 @@ export interface Client {
   anamnesisResponses?: Record<string, unknown> | null;
 }
 
+export interface Aluno {
+  id: string;
+  nomeCompleto: string;
+  telefone?: string | null;
+  pais?: string | null;
+  email?: string | null;
+  profissao?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Lead {
   id: string;
   clientId: string;

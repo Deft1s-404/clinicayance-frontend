@@ -24,6 +24,7 @@ type LinkItem = { href: string; label: string; icon: IconName };
 const links: LinkItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { href: '/clients', label: 'Clientes', icon: 'users' },
+  { href: '/alunos', label: 'Alunos', icon: 'users' },
   { href: '/leads', label: 'Leads', icon: 'funnel' },
   { href: '/appointments', label: 'Consultas', icon: 'calendar' },
   { href: '/payments', label: 'Pagamentos', icon: 'card' },
