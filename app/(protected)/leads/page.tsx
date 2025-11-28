@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
@@ -13,6 +13,8 @@ type LeadStageOption = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'PROPOSAL' | 'WON' | 
 interface LeadsResponse {
   data: Lead[];
   total: number;
+  page: number;
+  limit: number;
 }
 
 interface ClientsResponse {
@@ -20,10 +22,14 @@ interface ClientsResponse {
 }
 
 const stageOptions: LeadStageOption[] = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'WON', 'LOST'];
+const PAGE_SIZE = 50;
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [lastFetchedSearch, setLastFetchedSearch] = useState('');
   const [selectedStage, setSelectedStage] = useState<string>('');
   const [selectedSource, setSelectedSource] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -42,28 +48,69 @@ export default function LeadsPage() {
   const [clientOptions, setClientOptions] = useState<Client[]>([]);
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [isClientSearchLoading, setIsClientSearchLoading] = useState(false);
+  const latestRequestRef = useRef(0);
+  const hasFetchedInitial = useRef(false);
 
-  const fetchLeads = async (stageFilter?: string, sourceFilter?: string) => {
-    try {
+  const isSearchDirty = search !== lastFetchedSearch;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
+  const effectivePage = Math.min(currentPage, totalPages);
+  const showingFrom = total === 0 ? 0 : (effectivePage - 1) * PAGE_SIZE + 1;
+  const showingTo = total === 0 ? 0 : Math.min(effectivePage * PAGE_SIZE, total);
+  const canGoPrevious = effectivePage > 1;
+  const canGoNext = effectivePage < totalPages && total > 0;
+  const hasFilters = Boolean(selectedStage || selectedSource || lastFetchedSearch);
+
+  const fetchLeads = useCallback(
+    async (options?: { page?: number; searchTerm?: string; stage?: string; source?: string }) => {
+      const pageToFetch = options?.page ?? currentPage;
+      const searchTerm = options?.searchTerm ?? lastFetchedSearch;
+      const stage = options?.stage ?? selectedStage;
+      const source = options?.source ?? selectedSource;
+      const previousPage = currentPage;
+
+      if (pageToFetch !== currentPage) {
+        setCurrentPage(pageToFetch);
+      }
+
+      const requestId = ++latestRequestRef.current;
       setIsLoading(true);
       setError(null);
-      const params: Record<string, unknown> = { limit: 100 };
-      if (stageFilter) {
-        params.stage = stageFilter;
+
+      try {
+        const response = await api.get<LeadsResponse>('/leads', {
+          params: {
+            search: searchTerm || undefined,
+            stage: stage || undefined,
+            source: source || undefined,
+            page: pageToFetch,
+            limit: PAGE_SIZE
+          }
+        });
+
+        if (requestId !== latestRequestRef.current) {
+          return;
+        }
+
+        setLeads(response.data.data);
+        setTotal(response.data.total);
+        setCurrentPage(response.data.page ?? pageToFetch);
+        setLastFetchedSearch(searchTerm);
+      } catch (e) {
+        console.error(e);
+        if (requestId === latestRequestRef.current) {
+          setError('Nao foi possivel carregar os leads.');
+          if (pageToFetch !== previousPage) {
+            setCurrentPage(previousPage);
+          }
+        }
+      } finally {
+        if (requestId === latestRequestRef.current) {
+          setIsLoading(false);
+        }
       }
-      if (sourceFilter) {
-        params.source = sourceFilter;
-      }
-      const response = await api.get<LeadsResponse>('/leads', { params });
-      setLeads(response.data.data);
-      setTotal(response.data.total);
-    } catch (e) {
-      console.error(e);
-      setError('Não foi possível carregar os leads.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [currentPage, lastFetchedSearch, selectedSource, selectedStage]
+  );
 
   const fetchClientOptions = useCallback(
     async (query: string) => {
@@ -89,8 +136,19 @@ export default function LeadsPage() {
   );
 
   useEffect(() => {
+    if (hasFetchedInitial.current) {
+      return;
+    }
+    hasFetchedInitial.current = true;
     fetchLeads();
-  }, []);
+  }, [fetchLeads]);
+
+  useEffect(() => {
+    if (!isSearchDirty) {
+      return;
+    }
+    fetchLeads({ page: 1, searchTerm: search });
+  }, [fetchLeads, isSearchDirty, search]);
 
   useEffect(() => {
     if (!isModalOpen) {
@@ -157,6 +215,66 @@ export default function LeadsPage() {
     }, 150);
   };
 
+  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSearch(event.target.value);
+    setError(null);
+    setIsLoading(true);
+  };
+
+  const handleStageChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const stage = event.target.value;
+    setSelectedStage(stage);
+    fetchLeads({
+      page: 1,
+      searchTerm: isSearchDirty ? search : lastFetchedSearch,
+      stage,
+      source: selectedSource
+    });
+  };
+
+  const handleSourceChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const source = event.target.value;
+    setSelectedSource(source);
+    fetchLeads({
+      page: 1,
+      searchTerm: isSearchDirty ? search : lastFetchedSearch,
+      stage: selectedStage,
+      source
+    });
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages || page === currentPage || isLoading) {
+      return;
+    }
+    fetchLeads({
+      page,
+      searchTerm: isSearchDirty ? search : lastFetchedSearch
+    });
+  };
+
+  const handlePreviousPage = () => {
+    if (!canGoPrevious) {
+      return;
+    }
+    handlePageChange(currentPage - 1);
+  };
+
+  const handleNextPage = () => {
+    if (!canGoNext) {
+      return;
+    }
+    handlePageChange(currentPage + 1);
+  };
+
+  const handleRefresh = () => {
+    const nextPage = isSearchDirty ? 1 : effectivePage;
+    fetchLeads({
+      page: nextPage,
+      searchTerm: isSearchDirty ? search : lastFetchedSearch
+    });
+  };
+
   const handleSelectClient = (client: Client) => {
     setFormState((prev) => ({ ...prev, clientId: client.id }));
     setClientSearchTerm(client.name);
@@ -177,7 +295,10 @@ export default function LeadsPage() {
         await api.post('/leads', formState);
       }
       setIsModalOpen(false);
-      await fetchLeads(selectedStage);
+      await fetchLeads({
+        page: currentPage,
+        searchTerm: isSearchDirty ? search : lastFetchedSearch
+      });
     } catch (e) {
       console.error(e);
       setError('Erro ao salvar lead.');
@@ -197,7 +318,10 @@ export default function LeadsPage() {
       setError(null);
       await api.delete(`/leads/${leadPendingDeletion.id}`);
       setLeadPendingDeletion(null);
-      await fetchLeads(selectedStage);
+      await fetchLeads({
+        page: currentPage,
+        searchTerm: isSearchDirty ? search : lastFetchedSearch
+      });
     } catch (e) {
       console.error(e);
       setError('Erro ao remover lead.');
@@ -216,10 +340,12 @@ export default function LeadsPage() {
   const handleExportCsv = async () => {
     try {
       setError(null);
+      const searchTerm = isSearchDirty ? search : lastFetchedSearch;
       const response = await api.get('/leads/export', {
         params: {
           stage: selectedStage || undefined,
-          source: selectedSource || undefined
+          source: selectedSource || undefined,
+          search: searchTerm || undefined
         },
         responseType: 'blob'
       });
@@ -247,17 +373,26 @@ export default function LeadsPage() {
           <h1 className="text-3xl font-semibold text-slate-900">Leads e Funil</h1>
           <p className="text-sm text-gray-500">Controle o funil comercial e qualifique os leads.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="search"
+            placeholder="Buscar lead ou origem..."
+            value={search}
+            onChange={handleSearchChange}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleRefresh();
+              }
+            }}
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-primary focus:outline-none"
+          />
           <select
             value={selectedStage}
-            onChange={(event) => {
-              const stage = event.target.value;
-              setSelectedStage(stage);
-              fetchLeads(stage || undefined, selectedSource || undefined);
-            }}
+            onChange={handleStageChange}
             className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
           >
-            <option value="">Todos os estágios</option>
+            <option value="">Todos os estagios</option>
             {stageOptions.map((stage) => (
               <option key={stage} value={stage}>
                 {stage}
@@ -266,20 +401,22 @@ export default function LeadsPage() {
           </select>
           <select
             value={selectedSource}
-            onChange={(event) => {
-              const source = event.target.value;
-              setSelectedSource(source);
-              fetchLeads(selectedStage || undefined, source || undefined);
-            }}
+            onChange={handleSourceChange}
             className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
           >
             <option value="">Todas as origens</option>
             <option value="instagram">Instagram</option>
             <option value="facebook">Facebook</option>
-            <option value="indicacao">Indicação</option>
+            <option value="indicacao">Indicacao</option>
             <option value="site">Site</option>
             <option value="whatsapp">WhatsApp</option>
           </select>
+          <button
+            onClick={handleRefresh}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+          >
+            Atualizar
+          </button>
           <button
             onClick={handleExportCsv}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
@@ -308,8 +445,8 @@ export default function LeadsPage() {
               <th className="px-6 py-3">Cliente</th>
               <th className="px-6 py-3">Origem</th>
               <th className="px-6 py-3">Notas</th>
-              <th className="px-6 py-3">Estágio</th>
-              <th className="px-6 py-3 text-right">Ações</th>
+              <th className="px-6 py-3">Estagio</th>
+              <th className="px-6 py-3 text-right">Acoes</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
@@ -330,11 +467,11 @@ export default function LeadsPage() {
                 <tr key={lead.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <p className="font-semibold">{lead.client?.name}</p>
-                    <p className="text-xs text-gray-400">{lead.client?.email}</p>
-                    <p className="text-xs text-gray-400">{lead.client?.phone}</p>
+                    <p className="text-xs text-gray-400">{lead.client?.email ?? '--'}</p>
+                    <p className="text-xs text-gray-400">{lead.client?.phone ?? '--'}</p>
                   </td>
-                  <td className="px-6 py-4">{lead.source ?? '—'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{lead.notes ?? '—'}</td>
+                  <td className="px-6 py-4">{lead.source ?? '--'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{lead.notes ?? '--'}</td>
                   <td className="px-6 py-4">
                     <StatusBadge value={lead.stage} />
                   </td>
@@ -361,7 +498,38 @@ export default function LeadsPage() {
         </table>
       </div>
 
-      <p className="text-xs text-gray-400">Total de leads: {total}</p>
+      <div className="flex flex-col items-start justify-between gap-3 border-t border-gray-100 pt-4 text-xs text-gray-500 sm:flex-row sm:items-center sm:text-sm">
+        <p>
+          {isLoading
+            ? 'Carregando leads...'
+            : total > 0
+            ? `Exibindo ${showingFrom}-${showingTo} de ${total} registros`
+            : hasFilters
+            ? 'Nenhum resultado encontrado para os filtros aplicados.'
+            : 'Nenhum registro encontrado'}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePreviousPage}
+            disabled={!canGoPrevious || isLoading}
+            className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Anterior
+          </button>
+          <span className="font-medium text-gray-600">
+            Pagina {total > 0 ? effectivePage : 1} de {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={handleNextPage}
+            disabled={!canGoNext || isLoading}
+            className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Proxima
+          </button>
+        </div>
+      </div>
 
       <Modal
         title={editingLeadId ? 'Atualizar lead' : 'Novo lead'}
@@ -428,14 +596,14 @@ export default function LeadsPage() {
               <option value="">Selecione a origem</option>
               <option value="instagram">Instagram</option>
               <option value="facebook">Facebook</option>
-              <option value="indicacao">Indicação</option>
+              <option value="indicacao">Indicacao</option>
               <option value="site">Site</option>
               <option value="whatsapp">WhatsApp</option>
             </select>
           </label>
 
           <label className="text-sm">
-            Estágio
+            Estagio
             <select
               value={formState.stage}
               onChange={(event) =>
