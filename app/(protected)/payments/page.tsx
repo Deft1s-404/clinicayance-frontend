@@ -442,7 +442,7 @@ export default function PaymentsPage() {
         >
           Pagamentos manuais
         </button>
-        <button
+        {/* <button
           type="button"
           onClick={() => setActiveTab('paypal')}
           className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
@@ -452,7 +452,7 @@ export default function PaymentsPage() {
           }`}
         >
           PayPal
-        </button>
+        </button> */}
       </div>
     </div>
   );

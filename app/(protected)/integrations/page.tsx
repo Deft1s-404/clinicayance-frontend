@@ -1206,7 +1206,7 @@ export default function IntegrationsPage() {
         )}
       </section> */}
 
-      <section className="rounded-2xl bg-white p-6 shadow-sm">
+      {/* <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">PayPal</h2>
@@ -1269,7 +1269,7 @@ export default function IntegrationsPage() {
             {paypalError}
           </div>
         )}
-      </section>
+      </section> */}
 
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
