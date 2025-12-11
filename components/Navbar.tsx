@@ -26,6 +26,7 @@ const links: LinkItem[] = [
   { href: '/clients', label: 'Clientes', icon: 'users' },
   { href: '/alunos', label: 'Alunos', icon: 'users' },
   { href: '/leads', label: 'Leads', icon: 'funnel' },
+  { href: '/course-leads', label: 'Leads Curso', icon: 'funnel' },
   { href: '/appointments', label: 'Consultas', icon: 'calendar' },
   { href: '/payments', label: 'Pagamentos', icon: 'card' },
   { href: '/campaigns', label: 'Campanhas', icon: 'megaphone' },

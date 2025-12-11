@@ -35,6 +35,18 @@ export interface Aluno {
   updatedAt: string;
 }
 
+export interface CourseLead {
+  id: string;
+  nomeCompleto: string;
+  telefone?: string | null;
+  pais?: string | null;
+  email?: string | null;
+  origem: string;
+  nota?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Lead {
   id: string;
   clientId: string;
