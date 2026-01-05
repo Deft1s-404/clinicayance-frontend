@@ -49,18 +49,14 @@ export interface CourseLead {
 
 export interface Lead {
   id: string;
-  clientId: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
   source?: string | null;
   notes?: string | null;
   score: number;
   stage: string;
   createdAt: string;
-  client: {
-    id: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-  };
 }
 
 export interface Appointment {

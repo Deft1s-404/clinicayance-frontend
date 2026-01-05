@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
-import { Client, Lead } from '../../../types';
+import { Lead } from '../../../types';
 
 type LeadStageOption = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'PROPOSAL' | 'WON' | 'LOST';
 
@@ -15,10 +15,6 @@ interface LeadsResponse {
   total: number;
   page: number;
   limit: number;
-}
-
-interface ClientsResponse {
-  data: Client[];
 }
 
 const stageOptions: LeadStageOption[] = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'WON', 'LOST'];
@@ -36,7 +32,9 @@ export default function LeadsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formState, setFormState] = useState({
-    clientId: '',
+    name: '',
+    email: '',
+    phone: '',
     source: '',
     notes: '',
     stage: 'NEW'
@@ -44,10 +42,6 @@ export default function LeadsPage() {
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [leadPendingDeletion, setLeadPendingDeletion] = useState<Lead | null>(null);
   const [isDeletingLead, setIsDeletingLead] = useState(false);
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [clientOptions, setClientOptions] = useState<Client[]>([]);
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-  const [isClientSearchLoading, setIsClientSearchLoading] = useState(false);
   const latestRequestRef = useRef(0);
   const hasFetchedInitial = useRef(false);
 
@@ -112,29 +106,6 @@ export default function LeadsPage() {
     [currentPage, lastFetchedSearch, selectedSource, selectedStage]
   );
 
-  const fetchClientOptions = useCallback(
-    async (query: string) => {
-      try {
-        setIsClientSearchLoading(true);
-        const params: Record<string, unknown> = { limit: 10 };
-        if (query.trim()) {
-          params.search = query.trim();
-        }
-        const response = await api.get<ClientsResponse>('/clients', { params });
-        const sortedClients = [...response.data.data].sort((a, b) =>
-          a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
-        );
-        setClientOptions(sortedClients);
-      } catch (e) {
-        console.error('Erro ao buscar clientes', e);
-        setClientOptions([]);
-      } finally {
-        setIsClientSearchLoading(false);
-      }
-    },
-    []
-  );
-
   useEffect(() => {
     if (hasFetchedInitial.current) {
       return;
@@ -150,69 +121,29 @@ export default function LeadsPage() {
     fetchLeads({ page: 1, searchTerm: search });
   }, [fetchLeads, isSearchDirty, search]);
 
-  useEffect(() => {
-    if (!isModalOpen) {
-      return;
-    }
-
-    const handler = window.setTimeout(() => {
-      void fetchClientOptions(clientSearchTerm);
-    }, 300);
-
-    return () => window.clearTimeout(handler);
-  }, [clientSearchTerm, fetchClientOptions, isModalOpen]);
-
-  useEffect(() => {
-    if (!isModalOpen) {
-      setClientOptions([]);
-      setIsClientDropdownOpen(false);
-      setIsClientSearchLoading(false);
-      setClientSearchTerm('');
-    }
-  }, [isModalOpen]);
-
   const openModal = (lead?: Lead) => {
     if (lead) {
       setEditingLeadId(lead.id);
       setFormState({
-        clientId: lead.clientId,
+        name: lead.name ?? '',
+        email: lead.email ?? '',
+        phone: lead.phone ?? '',
         source: lead.source ?? '',
         notes: lead.notes ?? '',
         stage: lead.stage
       });
-      setClientSearchTerm(lead.client?.name ?? '');
     } else {
       setEditingLeadId(null);
       setFormState({
-        clientId: '',
+        name: '',
+        email: '',
+        phone: '',
         source: '',
         notes: '',
         stage: 'NEW'
       });
-      setClientSearchTerm('');
     }
-    setIsClientDropdownOpen(false);
     setIsModalOpen(true);
-  };
-
-  const handleClientInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setClientSearchTerm(value);
-    setFormState((prev) => ({ ...prev, clientId: '' }));
-    setIsClientDropdownOpen(true);
-  };
-
-  const handleClientInputFocus = () => {
-    setIsClientDropdownOpen(true);
-    if (clientOptions.length === 0) {
-      void fetchClientOptions(clientSearchTerm);
-    }
-  };
-
-  const handleClientInputBlur = () => {
-    window.setTimeout(() => {
-      setIsClientDropdownOpen(false);
-    }, 150);
   };
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -275,20 +206,10 @@ export default function LeadsPage() {
     });
   };
 
-  const handleSelectClient = (client: Client) => {
-    setFormState((prev) => ({ ...prev, clientId: client.id }));
-    setClientSearchTerm(client.name);
-    setIsClientDropdownOpen(false);
-  };
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       setError(null);
-      if (!formState.clientId) {
-        setError('Selecione um cliente antes de salvar o lead.');
-        return;
-      }
       if (editingLeadId) {
         await api.patch(`/leads/${editingLeadId}`, formState);
       } else {
@@ -442,7 +363,7 @@ export default function LeadsPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="px-6 py-3">Cliente</th>
+              <th className="px-6 py-3">Lead</th>
               <th className="px-6 py-3">Origem</th>
               <th className="px-6 py-3">Notas</th>
               <th className="px-6 py-3">Estagio</th>
@@ -466,9 +387,9 @@ export default function LeadsPage() {
               leads.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    <p className="font-semibold">{lead.client?.name}</p>
-                    <p className="text-xs text-gray-400">{lead.client?.email ?? '--'}</p>
-                    <p className="text-xs text-gray-400">{lead.client?.phone ?? '--'}</p>
+                    <p className="font-semibold">{lead.name ?? 'Sem nome'}</p>
+                    <p className="text-xs text-gray-400">{lead.email ?? '--'}</p>
+                    <p className="text-xs text-gray-400">{lead.phone ?? '--'}</p>
                   </td>
                   <td className="px-6 py-4">{lead.source ?? '--'}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{lead.notes ?? '--'}</td>
@@ -538,52 +459,34 @@ export default function LeadsPage() {
       >
         <form onSubmit={handleSubmit} className="grid gap-4">
           <label className="text-sm">
-            Cliente
-            <div className="relative mt-1">
-              <input
-                value={clientSearchTerm}
-                onChange={handleClientInputChange}
-                onFocus={handleClientInputFocus}
-                onBlur={handleClientInputBlur}
-                placeholder="Busque por nome, e-mail ou telefone"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
-              />
-              {isClientSearchLoading && (
-                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-400">
-                  Buscando...
-                </span>
-              )}
-              {isClientDropdownOpen && (
-                <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                  {clientOptions.length === 0 ? (
-                    <p className="px-3 py-2 text-sm text-gray-500">
-                      {clientSearchTerm.trim()
-                        ? 'Nenhum cliente encontrado.'
-                        : 'Digite para buscar clientes.'}
-                    </p>
-                  ) : (
-                    clientOptions.map((client) => (
-                      <button
-                        type="button"
-                        key={client.id}
-                        onMouseDown={(event) => {
-                          event.preventDefault();
-                          handleSelectClient(client);
-                        }}
-                        className={`flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-gray-100 ${
-                          client.id === formState.clientId ? 'bg-gray-100' : ''
-                        }`}
-                      >
-                        <span className="font-medium text-slate-900">{client.name}</span>
-                        <span className="text-xs text-gray-500">
-                          {client.email ?? client.phone ?? 'Sem contato'}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+            Nome
+            <input
+              value={formState.name}
+              onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
+              placeholder="Nome do lead"
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+            />
+          </label>
+
+          <label className="text-sm">
+            Email
+            <input
+              type="email"
+              value={formState.email}
+              onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
+              placeholder="email@exemplo.com"
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+            />
+          </label>
+
+          <label className="text-sm">
+            Telefone/WhatsApp
+            <input
+              value={formState.phone}
+              onChange={(event) => setFormState((prev) => ({ ...prev, phone: event.target.value }))}
+              placeholder="(11) 99999-9999"
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+            />
           </label>
 
           <label className="text-sm">
@@ -645,7 +548,7 @@ export default function LeadsPage() {
           leadPendingDeletion ? (
             <p>
               Deseja realmente remover{' '}
-              <span className="font-semibold text-slate-900">{leadPendingDeletion.client?.name ?? 'este lead'}</span>?
+              <span className="font-semibold text-slate-900">{leadPendingDeletion.name ?? 'este lead'}</span>?
               Essa acao nao pode ser desfeita.
             </p>
           ) : null

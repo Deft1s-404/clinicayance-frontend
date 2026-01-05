@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import clsx from 'clsx';
 
 import { Loading } from './Loading';
@@ -115,14 +115,6 @@ export const Navbar = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-const navigationLinks = useMemo(() => {
-    if (user?.role !== 'ADMIN') {
-      return links.filter((link) => link.href !== '/payments' && link.href !== '/integrations');
-    }
-
-    return links;
-  }, [user?.role]);
-
   const handleLogout = () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
@@ -173,7 +165,7 @@ const navigationLinks = useMemo(() => {
           </div>
 
           <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-2 text-sm text-gray-700">
-            {navigationLinks.map((link) => (
+            {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -221,7 +213,7 @@ const navigationLinks = useMemo(() => {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-2 text-sm text-gray-700">
-          {navigationLinks.map((link) => (
+          {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}

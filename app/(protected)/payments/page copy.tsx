@@ -3,13 +3,11 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { Loading } from '../../../components/Loading';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
 import axios from 'axios';
 import { Appointment, Client, Payment } from '../../../types';
-import { useRoleGuard } from '../../../hooks/useRoleGuard';
 
 type PaymentStatusOption = 'PENDING' | 'CONFIRMED' | 'FAILED' | 'REFUNDED';
 
@@ -99,7 +97,6 @@ interface PaypalSyncResult {
 }
 
 export default function PaymentsPage() {
-  const { isAuthorized, loading: authLoading } = useRoleGuard(['ADMIN']);
   const [activeTab, setActiveTab] = useState<'manual' | 'paypal'>('manual');
 
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -268,48 +265,24 @@ export default function PaymentsPage() {
   }, [fetchPaypalTransactions]);
 
   useEffect(() => {
-        if (!isAuthorized || authLoading) {
-      return;
-    }
-
     fetchPayments();
     fetchAppointments();
     fetchClients('');
-  }, [authLoading, fetchClients, isAuthorized]);
+  }, [fetchClients]);
 
   useEffect(() => {
-     if (!isAuthorized || authLoading) {
-      return;
-    }
-
     if (activeTab === 'paypal' && paypalTransactions.length === 0 && !isPaypalLoading) {
       void fetchPaypalTransactions(1);
     }
-  }, [activeTab, authLoading, fetchPaypalTransactions, isAuthorized, isPaypalLoading, paypalTransactions.length]);
+  }, [activeTab, fetchPaypalTransactions, isPaypalLoading, paypalTransactions.length]);
 
   useEffect(() => {
-    if (!isAuthorized || authLoading) {
-      return undefined;
-    }
-
     const handle = setTimeout(() => {
       void fetchClients(clientSearchTerm);
     }, 300);
 
     return () => clearTimeout(handle);
-  }, [authLoading, clientSearchTerm, fetchClients, isAuthorized]);
-
-  if (authLoading) {
-    return (
-      <div className="flex justify-center py-10">
-        <Loading />
-      </div>
-    );
-  }
-
-  if (!isAuthorized) {
-    return null;
-  }
+  }, [clientSearchTerm, fetchClients]);
 
   const openModal = (payment?: Payment) => {
     if (payment) {

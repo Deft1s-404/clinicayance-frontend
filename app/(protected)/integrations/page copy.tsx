@@ -4,10 +4,8 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { Loading } from '../../../components/Loading';
 import { Modal } from '../../../components/Modal';
 import api from '../../../lib/api';
-import { useRoleGuard } from '../../../hooks/useRoleGuard';
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
@@ -85,17 +83,6 @@ type MetaConnectionStatus = {
   lastSyncedAt: string | null;
 };
 
-type VindiIntegrationStatus = {
-  connected: boolean;
-  connectedAt: string | null;
-  lastFour: string | null;
-  connectedBy: {
-    id: string;
-    name: string | null;
-    email: string | null;
-  } | null;
-};
-
 type EvolutionQrPayload = {
   svg: string | null;
   base64: string | null;
@@ -162,7 +149,6 @@ const EVOLUTION_FIRST_POLL_DELAY = 30000;
 export default function IntegrationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthorized, loading: authLoading } = useRoleGuard(['ADMIN']);
 
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
@@ -179,12 +165,6 @@ export default function IntegrationsPage() {
   const [metaStatusLoading, setMetaStatusLoading] = useState(true);
   const [metaConnection, setMetaConnection] = useState<MetaConnectionStatus | null>(null);
   const [isMetaDisconnecting, setIsMetaDisconnecting] = useState(false);
-
-  const [vindiStatus, setVindiStatus] = useState<VindiIntegrationStatus | null>(null);
-  const [vindiStatusLoading, setVindiStatusLoading] = useState(true);
-  const [vindiApiKeyInput, setVindiApiKeyInput] = useState('');
-  const [isVindiSaving, setIsVindiSaving] = useState(false);
-  const [vindiError, setVindiError] = useState<string | null>(null);
 
   const [evolutionInstances, setEvolutionInstances] = useState<EvolutionSession[]>([]);
   const [selectedEvolutionInstanceId, setSelectedEvolutionInstanceId] = useState<string | null>(null);
@@ -318,59 +298,6 @@ export default function IntegrationsPage() {
     }
   }, []);
 
-  const loadVindiStatus = useCallback(async () => {
-    setVindiStatusLoading(true);
-    try {
-      const { data } = await api.get<VindiIntegrationStatus>('/integrations/vindi/status');
-      setVindiStatus(data);
-      setVindiError(null);
-    } catch (err) {
-      console.error(err);
-      setVindiStatus(null);
-      setVindiError('Nao foi possivel carregar o status da Vindi.');
-    } finally {
-      setVindiStatusLoading(false);
-    }
-  }, []);
-
-  const handleVindiConnect = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const sanitizedKey = vindiApiKeyInput.trim();
-
-      if (!sanitizedKey) {
-        setVindiError('Informe a API key da Vindi.');
-        return;
-      }
-
-      setIsVindiSaving(true);
-      setVindiError(null);
-      setFeedback(null);
-
-      try {
-        const { data } = await api.post<VindiIntegrationStatus>('/integrations/vindi/connect', {
-          apiKey: sanitizedKey
-        });
-        setVindiStatus(data);
-        setVindiApiKeyInput('');
-        setFeedback({
-          type: 'success',
-          message: 'Integração Vindi conectada com sucesso.'
-        });
-      } catch (err) {
-        console.error(err);
-        setVindiError('Nao foi possivel salvar a API key da Vindi.');
-        setFeedback({
-          type: 'error',
-          message: 'Falha ao conectar com a Vindi.'
-        });
-      } finally {
-        setIsVindiSaving(false);
-      }
-    },
-    [setFeedback, vindiApiKeyInput]
-  );
-
   const loadEvolutionStatus = useCallback(async (preferredInstanceId?: string | null) => {
     setEvolutionStatusLoading(true);
     try {
@@ -407,30 +334,13 @@ export default function IntegrationsPage() {
   
 
   useEffect(() => {
-    if (!isAuthorized || authLoading) {
-      return;
-    }
-
     void loadGoogleStatus();
     void loadPaypalStatus();
     void loadMetaStatus();
-    void loadVindiStatus();
     void loadEvolutionStatus();
-  }, [
-    authLoading,
-    isAuthorized,
-    loadGoogleStatus,
-    loadPaypalStatus,
-    loadMetaStatus,
-    loadVindiStatus,
-    loadEvolutionStatus
-  ]);
+  }, [loadGoogleStatus, loadPaypalStatus, loadMetaStatus, loadEvolutionStatus]);
 
   useEffect(() => {
-     if (!isAuthorized || authLoading) {
-      return;
-    }
-
     if (!statusParam) {
       return;
     }
@@ -470,11 +380,9 @@ export default function IntegrationsPage() {
 
     return () => clearTimeout(timeout);
   }, [
-    authLoading,
     statusParam,
     messageParam,
     integrationParam,
-    isAuthorized,
     router,
     loadGoogleStatus,
     loadPaypalStatus,
@@ -628,15 +536,11 @@ export default function IntegrationsPage() {
 
   // Register global cleanup once both stop callbacks exist
   useEffect(() => {
-    if (!isAuthorized || authLoading) {
-      return;
-    }
-
     return () => {
       stopEvolutionPolling();
       clearEvolutionModalAutoClose();
     };
-  }, [authLoading, clearEvolutionModalAutoClose, isAuthorized, stopEvolutionPolling]);
+  }, [clearEvolutionModalAutoClose, stopEvolutionPolling]);
 
   
 
@@ -993,10 +897,6 @@ export default function IntegrationsPage() {
   const evolutionStatus = evolutionSession?.status ?? null;
 
   useEffect(() => {
-    if (!isAuthorized || authLoading) {
-      return;
-    }
-
     if (!isEvolutionModalOpen || !evolutionInstanceId || evolutionStatus !== 'pending') {
       stopEvolutionPolling();
       return;
@@ -1030,11 +930,9 @@ export default function IntegrationsPage() {
       stopEvolutionPolling();
     };
   }, [
-    authLoading,
     evolutionInstanceId,
     evolutionStatus,
     isEvolutionModalOpen,
-    isAuthorized,
     pollEvolutionStatus,
     stopEvolutionPolling
   ]);
@@ -1042,9 +940,6 @@ export default function IntegrationsPage() {
   
 
   useEffect(() => {
-     if (!isAuthorized || authLoading) {
-      return;
-    }
     const currentStatus = evolutionSession?.status ?? null;
     const previousStatus = previousEvolutionStatus.current;
 
@@ -1066,25 +961,13 @@ export default function IntegrationsPage() {
     previousEvolutionStatus.current = currentStatus;
   }, [
     clearEvolutionModalAutoClose,
-    authLoading,
     evolutionSession?.status,
     loadEvolutionStatus,
-     isAuthorized,
     stopEvolutionPolling
   ]);
 
   const dismissFeedback = () => setFeedback(null);
-if (authLoading) {
-    return (
-      <div className="flex justify-center py-10">
-        <Loading />
-      </div>
-    );
-  }
 
-  if (!isAuthorized) {
-    return null;
-  }
   const evolutionButtonLabel = (() => {
     if (isEvolutionActionLoading) {
       return 'Processando...';
@@ -1242,85 +1125,6 @@ if (authLoading) {
             conexao.
           </p>
         )}
-      </section>
-
-      <section className="rounded-2xl bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Integracao Vindi</h2>
-            <p className="mt-1 max-w-xl text-sm text-gray-500">
-              Armazene aqui a API key fornecida pela Vindi para habilitar as automacoes de cobranca no
-              CRM.
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-            {vindiStatusLoading ? (
-              <span>Verificando status da integracao...</span>
-            ) : vindiStatus?.connected ? (
-              <div className="space-y-1">
-                <strong className="text-emerald-700">API key cadastrada</strong>
-                {vindiStatus.connectedAt && (
-                  <span>
-                    Atualizada em:{' '}
-                    {new Date(vindiStatus.connectedAt).toLocaleString('pt-BR', {
-                      dateStyle: 'short',
-                      timeStyle: 'short'
-                    })}
-                  </span>
-                )}
-                {vindiStatus.connectedBy && (
-                  <span>
-                    Responsavel:{' '}
-                    {vindiStatus.connectedBy.name ?? vindiStatus.connectedBy.email ?? 'Nao informado'}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <span>
-                Nenhuma API key cadastrada. Cole a chave da Vindi abaixo e clique em &quot;Conectar&quot;.
-              </span>
-            )}
-          </div>
-        </div>
-
-        <form onSubmit={handleVindiConnect} className="mt-4 space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700" htmlFor="vindi-api-key">
-              API Key
-            </label>
-            <input
-              id="vindi-api-key"
-              type="password"
-              value={vindiApiKeyInput}
-              onChange={(event) => {
-                setVindiApiKeyInput(event.target.value);
-                if (vindiError) {
-                  setVindiError(null);
-                }
-              }}
-              placeholder="Cole a API key gerada no painel da Vindi"
-              disabled={isVindiSaving}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-gray-100"
-            />
-            <p className="text-xs text-gray-500">
-              Somente administradores conseguem visualizar ou atualizar esta informacao.
-            </p>
-          </div>
-
-          {vindiError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {vindiError}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isVindiSaving || vindiApiKeyInput.trim().length === 0}
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-300"
-          >
-            {isVindiSaving ? 'Conectando...' : 'Conectar'}
-          </button>
-        </form>
       </section>
 
       {/* <section className="rounded-2xl bg-white p-6 shadow-sm">
