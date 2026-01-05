@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  apiKey?: string;
 }
 
 export interface Client {
