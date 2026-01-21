@@ -237,7 +237,7 @@ export default function KnowledgePage() {
         <div>
           <h1 className="text-3xl font-semibold text-slate-900">Base de conhecimento</h1>
           <p className="text-sm text-gray-500">
-            Centralize instruções e contextos que o n8n consulta via <span className="font-mono text-xs">GET /ai/knowledge/context</span>.
+            Insira informações sobre a clinica para servir de base de conhecimento para seu agente de ia.
           </p>
         </div>
         <div className="flex gap-3">
