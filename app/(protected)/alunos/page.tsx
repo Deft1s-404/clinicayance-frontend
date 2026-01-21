@@ -20,14 +20,26 @@ interface AlunoFormState {
   pais: string;
   email: string;
   profissao: string;
+  curso: string;
+  pagamentoOk: boolean;
 }
+
+type AlunoFiltersState = {
+  curso: string;
+  pais: string;
+  contato: string;
+  nome: string;
+  pagamento: 'all' | 'paid' | 'open';
+};
 
 const emptyForm: AlunoFormState = {
   nomeCompleto: '',
   telefone: '',
   pais: '',
   email: '',
-  profissao: ''
+  profissao: '',
+  curso: '',
+  pagamentoOk: false
 };
 
 const PAGE_SIZE = 50;
@@ -45,9 +57,29 @@ export default function AlunosPage() {
   const [editingAlunoId, setEditingAlunoId] = useState<string | null>(null);
   const [alunoPendingDeletion, setAlunoPendingDeletion] = useState<Aluno | null>(null);
   const [isDeletingAluno, setIsDeletingAluno] = useState(false);
+  const [filters, setFilters] = useState<AlunoFiltersState>({
+    curso: '',
+    pais: '',
+    contato: '',
+    nome: '',
+    pagamento: 'all'
+  });
+  const [lastFetchedFilters, setLastFetchedFilters] = useState<AlunoFiltersState>({
+    curso: '',
+    pais: '',
+    contato: '',
+    nome: '',
+    pagamento: 'all'
+  });
   const latestRequestRef = useRef(0);
   const hasFetchedInitial = useRef(false);
   const isSearchDirty = search !== lastFetchedSearch;
+  const areFiltersDirty =
+    filters.curso !== lastFetchedFilters.curso ||
+    filters.pais !== lastFetchedFilters.pais ||
+    filters.contato !== lastFetchedFilters.contato ||
+    filters.nome !== lastFetchedFilters.nome ||
+    filters.pagamento !== lastFetchedFilters.pagamento;
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
   const effectivePage = Math.min(currentPage, totalPages);
@@ -57,9 +89,10 @@ export default function AlunosPage() {
   const canGoNext = effectivePage < totalPages && total > 0;
 
   const fetchAlunos = useCallback(
-    async (options?: { page?: number; searchTerm?: string }) => {
+    async (options?: { page?: number; searchTerm?: string; filtersOverride?: AlunoFiltersState }) => {
       const pageToFetch = options?.page ?? currentPage;
       const searchTerm = options?.searchTerm ?? lastFetchedSearch;
+      const filtersToUse = options?.filtersOverride ?? filters;
       const previousPage = currentPage;
 
       if (pageToFetch !== currentPage) {
@@ -75,7 +108,15 @@ export default function AlunosPage() {
           params: {
             search: searchTerm || undefined,
             page: pageToFetch,
-            limit: PAGE_SIZE
+            limit: PAGE_SIZE,
+            curso: filtersToUse.curso || undefined,
+            pais: filtersToUse.pais || undefined,
+            contato: filtersToUse.contato || undefined,
+            nome: filtersToUse.nome || undefined,
+            pagamentoOk:
+              filtersToUse.pagamento === 'all'
+                ? undefined
+                : filtersToUse.pagamento === 'paid'
           }
         });
 
@@ -87,6 +128,7 @@ export default function AlunosPage() {
         setTotal(response.data.total);
         setCurrentPage(response.data.page ?? pageToFetch);
         setLastFetchedSearch(searchTerm);
+        setLastFetchedFilters({ ...filtersToUse });
       } catch (e) {
         console.error(e);
         if (requestId === latestRequestRef.current) {
@@ -101,7 +143,7 @@ export default function AlunosPage() {
         }
       }
     },
-    [currentPage, lastFetchedSearch]
+    [currentPage, filters, lastFetchedSearch]
   );
 
   useEffect(() => {
@@ -116,8 +158,15 @@ export default function AlunosPage() {
     if (!isSearchDirty) {
       return;
     }
-    fetchAlunos({ page: 1, searchTerm: search });
-  }, [fetchAlunos, isSearchDirty, search]);
+    fetchAlunos({ page: 1, searchTerm: search, filtersOverride: filters });
+  }, [fetchAlunos, filters, isSearchDirty, search]);
+
+  useEffect(() => {
+    if (!areFiltersDirty) {
+      return;
+    }
+    fetchAlunos({ page: 1, searchTerm: search, filtersOverride: filters });
+  }, [areFiltersDirty, fetchAlunos, filters, search]);
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages || page === currentPage || isLoading) {
@@ -141,10 +190,12 @@ export default function AlunosPage() {
   };
 
   const handleRefresh = () => {
-    const nextPage = isSearchDirty ? 1 : effectivePage;
+    const shouldResetPage = isSearchDirty || areFiltersDirty;
+    const nextPage = shouldResetPage ? 1 : effectivePage;
     fetchAlunos({
       page: nextPage,
-      searchTerm: isSearchDirty ? search : lastFetchedSearch
+      searchTerm: isSearchDirty ? search : lastFetchedSearch,
+      filtersOverride: filters
     });
   };
 
@@ -162,7 +213,9 @@ export default function AlunosPage() {
         telefone: aluno.telefone ?? '',
         pais: aluno.pais ?? '',
         email: aluno.email ?? '',
-        profissao: aluno.profissao ?? ''
+        profissao: aluno.profissao ?? '',
+        curso: aluno.curso ?? '',
+        pagamentoOk: aluno.pagamentoOk
       });
     } else {
       setEditingAlunoId(null);
@@ -178,8 +231,22 @@ export default function AlunosPage() {
   };
 
   const handleFormChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = event.target;
+    setFormState((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleFilterChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target;
-    setFormState((prev) => ({ ...prev, [name]: value }));
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setIsLoading(true);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({ curso: '', pais: '', contato: '', nome: '', pagamento: 'all' });
+    setIsLoading(true);
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -191,7 +258,9 @@ export default function AlunosPage() {
         telefone: formState.telefone.trim() || undefined,
         pais: formState.pais.trim() || undefined,
         email: formState.email.trim() || undefined,
-        profissao: formState.profissao.trim() || undefined
+        profissao: formState.profissao.trim() || undefined,
+        curso: formState.curso.trim() || undefined,
+        pagamentoOk: formState.pagamentoOk
       };
 
       if (!payload.nomeCompleto) {
@@ -206,10 +275,12 @@ export default function AlunosPage() {
       }
 
       closeModal();
-      const nextPage = isSearchDirty ? 1 : effectivePage;
+      const shouldResetPage = isSearchDirty || areFiltersDirty;
+      const nextPage = shouldResetPage ? 1 : effectivePage;
       await fetchAlunos({
         page: nextPage,
-        searchTerm: isSearchDirty ? search : lastFetchedSearch
+        searchTerm: isSearchDirty ? search : lastFetchedSearch,
+        filtersOverride: filters
       });
     } catch (e) {
       console.error(e);
@@ -229,10 +300,12 @@ export default function AlunosPage() {
       setIsDeletingAluno(true);
       await api.delete(`/alunos/${alunoPendingDeletion.id}`);
       setAlunoPendingDeletion(null);
-      const nextPage = isSearchDirty ? 1 : effectivePage;
+      const shouldResetPage = isSearchDirty || areFiltersDirty;
+      const nextPage = shouldResetPage ? 1 : effectivePage;
       await fetchAlunos({
         page: nextPage,
-        searchTerm: isSearchDirty ? search : lastFetchedSearch
+        searchTerm: isSearchDirty ? search : lastFetchedSearch,
+        filtersOverride: filters
       });
     } catch (e) {
       console.error(e);
@@ -288,6 +361,76 @@ export default function AlunosPage() {
         </div>
       </div>
 
+      <div className="grid gap-4 rounded-2xl bg-white p-4 shadow md:grid-cols-5">
+        <label className="text-sm">
+          Curso
+          <input
+            type="text"
+            name="curso"
+            value={filters.curso}
+            onChange={handleFilterChange}
+            placeholder="Informe o curso"
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+        </label>
+        <label className="text-sm">
+          País
+          <input
+            type="text"
+            name="pais"
+            value={filters.pais}
+            onChange={handleFilterChange}
+            placeholder="Filtrar por país"
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+        </label>
+        <label className="text-sm">
+          Contato
+          <input
+            type="text"
+            name="contato"
+            value={filters.contato}
+            onChange={handleFilterChange}
+            placeholder="Telefone ou e-mail"
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+        </label>
+        <label className="text-sm">
+          Nome
+          <input
+            type="text"
+            name="nome"
+            value={filters.nome}
+            onChange={handleFilterChange}
+            placeholder="Filtrar por nome"
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          />
+        </label>
+        <label className="text-sm">
+          Pagamento
+          <select
+            name="pagamento"
+            value={filters.pagamento}
+            onChange={handleFilterChange}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          >
+            <option value="all">Todos</option>
+            <option value="paid">Pago</option>
+            <option value="open">Em aberto</option>
+          </select>
+        </label>
+        <div className="flex items-end justify-start">
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            disabled={!areFiltersDirty}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Limpar filtros
+          </button>
+        </div>
+      </div>
+
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
       )}
@@ -299,6 +442,8 @@ export default function AlunosPage() {
               <th className="px-6 py-3">Nome</th>
               <th className="px-6 py-3">Contato</th>
               <th className="px-6 py-3">Pais</th>
+              <th className="px-6 py-3">Curso</th>
+              <th className="px-6 py-3">Pagamento</th>
               <th className="px-6 py-3">Profissão</th>
               <th className="px-6 py-3 text-right">Ações</th>
             </tr>
@@ -306,13 +451,13 @@ export default function AlunosPage() {
           <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
                   Carregando alunos...
                 </td>
               </tr>
             ) : alunos.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
                   Nenhum aluno encontrado.
                 </td>
               </tr>
@@ -325,6 +470,18 @@ export default function AlunosPage() {
                     {aluno.telefone && <div className="text-gray-400">{aluno.telefone}</div>}
                   </td>
                   <td className="px-6 py-4">{aluno.pais ?? '--'}</td>
+                  <td className="px-6 py-4">{aluno.curso ?? '--'}</td>
+                  <td className="px-6 py-4">
+                    {aluno.pagamentoOk ? (
+                      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-600">
+                        Pago
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-500">
+                        Em aberto
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4">{aluno.profissao ?? '--'}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -442,6 +599,28 @@ export default function AlunosPage() {
             />
           </label>
 
+          <label className="block text-sm">
+            Curso matriculado
+            <input
+              type="text"
+              name="curso"
+              value={formState.curso}
+              onChange={handleFormChange}
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            />
+          </label>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="pagamentoOk"
+              checked={formState.pagamentoOk}
+              onChange={handleFormChange}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            Pagamento confirmado
+          </label>
+
           {error && (
             <p className="md:col-span-2 text-xs text-red-600">
               {error}
@@ -481,4 +660,3 @@ export default function AlunosPage() {
     </div>
   );
 }
-

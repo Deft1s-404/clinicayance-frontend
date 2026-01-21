@@ -7,7 +7,7 @@ import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import api from '../../../lib/api';
-import { Client } from '../../../types';
+import { Client, TreatmentImage } from '../../../types';
 
 interface ClientsApiResponse {
   data: Client[];
@@ -30,6 +30,7 @@ interface ClientFormState {
   birthDate: string;
   language: string;
   anamnesis: string;
+  treatmentImageData: string;
 }
 
 const emptyForm: ClientFormState = {
@@ -45,10 +46,75 @@ const emptyForm: ClientFormState = {
   country: '',
   birthDate: '',
   language: '',
-  anamnesis: ''
+  anamnesis: '',
+  treatmentImageData: ''
 };
 
 const PAGE_SIZE = 50;
+
+const generateTempImageId = (index: number) => `treatment-image-${index}-${Date.now()}`;
+
+const normalizeTreatmentImages = (value: unknown): TreatmentImage[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((item, index) => {
+        if (!item) return null;
+        if (typeof item === 'string') {
+          return {
+            id: generateTempImageId(index),
+            url: item,
+            uploadedAt: new Date().toISOString()
+          };
+        }
+        if (typeof item === 'object' && 'url' in item && typeof (item as { url?: unknown }).url === 'string') {
+          const record = item as { id?: unknown; url?: unknown; uploadedAt?: unknown };
+          return {
+            id:
+              typeof record.id === 'string'
+                ? record.id
+                : generateTempImageId(index),
+            url: record.url as string,
+            uploadedAt:
+              typeof record.uploadedAt === 'string'
+                ? (record.uploadedAt as string)
+                : new Date().toISOString()
+          };
+        }
+        return null;
+      })
+      .filter((image): image is TreatmentImage => Boolean(image));
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const urls: string[] = [];
+    if (typeof record.before === 'string') urls.push(record.before);
+    if (typeof record.after === 'string') urls.push(record.after);
+    return urls.map((url, index) => ({
+      id: generateTempImageId(index),
+      url,
+      uploadedAt: new Date().toISOString()
+    }));
+  }
+  if (typeof value === 'string') {
+    return [
+      {
+        id: generateTempImageId(0),
+        url: value,
+        uploadedAt: new Date().toISOString()
+      }
+    ];
+  }
+  return [];
+};
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -98,7 +164,8 @@ export default function ClientsPage() {
         }
         const enrichedClients = response.data.data.map((client) => ({
           ...client,
-          anamnesisResponses: client.anamnesisResponses ?? null
+          anamnesisResponses: client.anamnesisResponses ?? null,
+          beforeAfterPhotos: normalizeTreatmentImages(client.beforeAfterPhotos)
         }));
         setClients(enrichedClients);
         setTotal(response.data.total);
@@ -189,7 +256,8 @@ export default function ClientsPage() {
         country: client.country ?? '',
         birthDate: client.birthDate ? client.birthDate.slice(0, 10) : '',
         language: client.language ?? '',
-        anamnesis: client.anamnesisResponses ? JSON.stringify(client.anamnesisResponses, null, 2) : ''
+        anamnesis: client.anamnesisResponses ? JSON.stringify(client.anamnesisResponses, null, 2) : '',
+        treatmentImageData: ''
       });
     } else {
       setEditingClientId(null);
@@ -225,6 +293,7 @@ export default function ClientsPage() {
       birthDate: formState.birthDate || undefined,
       language: formState.language || undefined,
       anamnesisResponses: parsedAnamnesis,
+      treatmentImage: formState.treatmentImageData || undefined,
       tags: formState.tags
         .split(',')
         .map((tag) => tag.trim())
@@ -274,6 +343,25 @@ export default function ClientsPage() {
     setClientPendingDeletion(null);
   };
 
+  const handlePhotoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) {
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setFormState((prev) => ({ ...prev, treatmentImageData: dataUrl }));
+    } catch (fileError) {
+      console.error(fileError);
+      setError('Falha ao processar a imagem selecionada. Tente novamente.');
+    }
+  };
+
+  const handleClearPhoto = () => {
+    setFormState((prev) => ({ ...prev, treatmentImageData: '' }));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -282,34 +370,53 @@ export default function ClientsPage() {
           <p className="text-sm text-gray-500">Gerencie a base de clientes e leads ativos.</p>
         </div>
 
-        <div className="flex gap-3">
-          <input
-            type="search"
-            placeholder="Buscar cliente..."
-            value={search}
-            onChange={handleSearchChange}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                handleRefresh();
-              }
-            }}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-primary focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
-          >
-            Atualizar
-          </button>
-          <button
-            type="button"
-            onClick={() => openModal()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
-          >
-            Novo Cliente
-          </button>
+        <button
+          type="button"
+          onClick={() => openModal()}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
+        >
+          Novo Cliente
+        </button>
+      </div>
+
+      <div className="grid gap-4 rounded-2xl bg-white p-4 shadow md:grid-cols-3">
+        <label className="text-xs font-semibold uppercase text-gray-500 md:col-span-2">
+          Busca livre
+          <div className="mt-1 flex gap-2">
+            <input
+              type="search"
+              placeholder="Nome, e-mail, telefone..."
+              value={search}
+              onChange={handleSearchChange}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleRefresh();
+                }
+              }}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
+            >
+              Buscar
+            </button>
+          </div>
+        </label>
+
+        <div className="text-xs font-semibold uppercase text-gray-500">
+          Ações rápidas
+          <div className="mt-1 flex gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="w-full rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
+            >
+              Atualizar lista
+            </button>
+          </div>
         </div>
       </div>
 
@@ -528,6 +635,32 @@ export default function ClientsPage() {
             />
           </label>
 
+          <div className="space-y-2 text-sm md:col-span-2">
+            <span className="font-medium">Anexar imagem de tratamento</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoFileChange}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 focus:border-primary focus:outline-none"
+            />
+            {formState.treatmentImageData && (
+              <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <img
+                  src={formState.treatmentImageData}
+                  alt="Imagem do tratamento"
+                  className="max-h-64 w-full rounded-md object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={handleClearPhoto}
+                  className="text-xs font-semibold text-red-500 hover:text-red-600"
+                >
+                  Remover foto
+                </button>
+              </div>
+            )}
+          </div>
+
           <label className="block text-sm md:col-span-2">
             Tags (separadas por virgula)
             <input
@@ -607,4 +740,3 @@ export default function ClientsPage() {
     </div>
   );
 }
-

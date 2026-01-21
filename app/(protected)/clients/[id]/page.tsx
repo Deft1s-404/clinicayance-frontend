@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import api from '../../../../lib/api';
-import { Client } from '../../../../types';
+import { Client, TreatmentImage } from '../../../../types';
 
 interface LeadDetail {
   id: string;
@@ -18,6 +18,7 @@ interface LeadDetail {
 interface AppointmentDetail {
   id: string;
   procedure: string;
+  country?: string | null;
   start: string;
   end: string;
   status: string;
@@ -37,6 +38,62 @@ interface ClientDetail extends Client {
   payments: PaymentDetail[];
   anamnesisResponses?: Record<string, unknown> | null;
 }
+
+const generateTempImageId = (index: number) => `treatment-image-${index}-${Date.now()}`;
+
+const normalizeTreatmentImages = (value: unknown): TreatmentImage[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((item, index) => {
+        if (!item) return null;
+        if (typeof item === 'string') {
+          return {
+            id: generateTempImageId(index),
+            url: item,
+            uploadedAt: new Date().toISOString()
+          };
+        }
+        if (typeof item === 'object' && 'url' in item && typeof (item as { url?: unknown }).url === 'string') {
+          const record = item as { id?: unknown; url?: unknown; uploadedAt?: unknown };
+          return {
+            id:
+              typeof record.id === 'string'
+                ? record.id
+                : generateTempImageId(index),
+            url: record.url as string,
+            uploadedAt:
+              typeof record.uploadedAt === 'string'
+                ? (record.uploadedAt as string)
+                : new Date().toISOString()
+          };
+        }
+        return null;
+      })
+      .filter((image): image is TreatmentImage => Boolean(image));
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const urls: string[] = [];
+    if (typeof record.before === 'string') urls.push(record.before);
+    if (typeof record.after === 'string') urls.push(record.after);
+    return urls.map((url, index) => ({
+      id: generateTempImageId(index),
+      url,
+      uploadedAt: new Date().toISOString()
+    }));
+  }
+  if (typeof value === 'string') {
+    return [
+      {
+        id: generateTempImageId(0),
+        url: value,
+        uploadedAt: new Date().toISOString()
+      }
+    ];
+  }
+  return [];
+};
 
 const formatDate = (value?: string | null) => {
   if (!value) return '-';
@@ -64,6 +121,8 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const treatmentImages = client?.beforeAfterPhotos ?? [];
   
 
   useEffect(() => {
@@ -77,6 +136,10 @@ export default function ClientDetailPage() {
         const data = response.data;
         setClient({
           ...data,
+          beforeAfterPhotos: normalizeTreatmentImages(data.beforeAfterPhotos),
+          leads: data.leads ?? [],
+          appointments: data.appointments ?? [],
+          payments: data.payments ?? [],
           anamnesisResponses: data.anamnesisResponses ?? null
         });
       } catch (err) {
@@ -214,7 +277,44 @@ export default function ClientDetailPage() {
               )}
             </section>
 
-            
+            <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800">Imagens de tratamento</h3>
+                  <p className="text-sm text-gray-500">
+                    Registros visuais enviados para acompanhar a evolução do paciente.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6">
+                {treatmentImages.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nenhuma imagem cadastrada.</p>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {treatmentImages.map((image) => (
+                      <button
+                        type="button"
+                        key={image.id}
+                        onClick={() => setSelectedImage(image.url)}
+                        className="group w-full text-left"
+                      >
+                        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 shadow-sm">
+                          <img
+                            src={image.url}
+                            alt="Imagem de tratamento"
+                            className="h-48 w-full object-cover transition duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500">
+                          Registrada em {formatDate(image.uploadedAt)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
 
             <section className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
               <h3 className="text-lg font-semibold text-slate-800">Leads</h3>
@@ -261,6 +361,10 @@ export default function ClientDetailPage() {
                       <p>
                         <strong className="text-slate-800">Procedimento:</strong>{' '}
                         {appointment.procedure}
+                      </p>
+                      <p>
+                        <strong className="text-slate-800">País:</strong>{' '}
+                        {appointment.country ?? '-'}
                       </p>
                       <p>
                         <strong className="text-slate-800">Início:</strong>{' '}
@@ -317,6 +421,30 @@ export default function ClientDetailPage() {
                 Voltar para lista
               </Link>
             </div>
+            {selectedImage && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+                onClick={() => setSelectedImage(null)}
+              >
+                <div
+                  className="relative max-h-full max-w-4xl"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedImage(null)}
+                    className="absolute -right-2 -top-2 rounded-full bg-white/90 px-3 py-1 text-sm font-semibold text-gray-600 shadow"
+                  >
+                    Fechar
+                  </button>
+                  <img
+                    src={selectedImage}
+                    alt="Imagem ampliada"
+                    className="max-h-[80vh] w-full rounded-2xl object-contain"
+                  />
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

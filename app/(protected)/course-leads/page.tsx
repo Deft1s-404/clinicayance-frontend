@@ -266,32 +266,52 @@ export default function CourseLeadsPage() {
           <h1 className="text-3xl font-semibold text-slate-900">Leads de Curso</h1>
           <p className="text-sm text-gray-500">Cadastre e organize leads de cursos e mentorias.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="search"
-            placeholder="Buscar por nome, email ou origem..."
-            value={search}
-            onChange={handleSearchChange}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                handleRefresh();
-              }
-            }}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-primary focus:outline-none"
-          />
-          <button
-            onClick={handleRefresh}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
-          >
-            Atualizar
-          </button>
-          <button
-            onClick={() => openModal()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
-          >
-            Novo Lead
-          </button>
+        <button
+          onClick={() => openModal()}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
+        >
+          Novo Lead
+        </button>
+      </div>
+
+      <div className="grid gap-4 rounded-2xl bg-white p-4 shadow md:grid-cols-3">
+        <label className="text-xs font-semibold uppercase text-gray-500 md:col-span-2">
+          Busca livre
+          <div className="mt-1 flex gap-2">
+            <input
+              type="search"
+              placeholder="Buscar por nome, email ou origem..."
+              value={search}
+              onChange={handleSearchChange}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleRefresh();
+                }
+              }}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
+            >
+              Buscar
+            </button>
+          </div>
+        </label>
+
+        <div className="text-xs font-semibold uppercase text-gray-500">
+          Ações rápidas
+          <div className="mt-1 flex gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="w-full rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
+            >
+              Atualizar lista
+            </button>
+          </div>
         </div>
       </div>
 

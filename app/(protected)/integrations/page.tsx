@@ -173,6 +173,10 @@ export default function IntegrationsPage() {
   const [isPaypalLoading, setIsPaypalLoading] = useState(false);
   const [paypalStatusLoading, setPaypalStatusLoading] = useState(true);
   const [paypalConnection, setPaypalConnection] = useState<PaypalConnectionStatus | null>(null);
+  const [manualClientId, setManualClientId] = useState('');
+  const [manualClientSecret, setManualClientSecret] = useState('');
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [isManualLoading, setIsManualLoading] = useState(false);
 
   const [metaError, setMetaError] = useState<string | null>(null);
   const [isMetaLoading, setIsMetaLoading] = useState(false);
@@ -544,6 +548,43 @@ export default function IntegrationsPage() {
       setIsPaypalLoading(false);
     }
   }, []);
+
+  const handleManualPaypalConnect = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const trimmedClientId = manualClientId.trim();
+      const trimmedClientSecret = manualClientSecret.trim();
+
+      if (!trimmedClientId || !trimmedClientSecret) {
+        setManualError('Informe o client_id e client_secret.');
+        return;
+      }
+
+      setManualError(null);
+      setFeedback(null);
+      setIsManualLoading(true);
+
+      try {
+        await api.post('/paypal/oauth/manual', {
+          clientId: trimmedClientId,
+          clientSecret: trimmedClientSecret
+        });
+        setManualClientId('');
+        setManualClientSecret('');
+        setFeedback({
+          type: 'success',
+          message: 'Conta PayPal conectada com sucesso.'
+        });
+        await loadPaypalStatus();
+      } catch (err) {
+        console.error(err);
+        setManualError('Nao foi possivel conectar com as credenciais informadas.');
+      } finally {
+        setIsManualLoading(false);
+      }
+    },
+    [loadPaypalStatus, manualClientId, manualClientSecret]
+  );
 
   const handleMetaConnect = useCallback(async () => {
     setMetaError(null);
@@ -1210,20 +1251,6 @@ if (authLoading) {
           ) : googleConnection?.connected ? (
             <div className="flex flex-col gap-1">
               <strong className="text-emerald-700">Agenda conectada</strong>
-              {googleConnection.email && <span>Conta: {googleConnection.email}</span>}
-              {googleConnection.expiresAt && (
-                <span>
-                  Token expira em:{' '}
-                  {new Date(googleConnection.expiresAt).toLocaleString('pt-BR', {
-                    dateStyle: 'short',
-                    timeStyle: 'short'
-                  })}
-                </span>
-              )}
-              <span>
-                Renovacao automatica:{' '}
-                {googleConnection.hasRefreshToken ? 'ativada' : 'nao disponivel'}
-              </span>
             </div>
           ) : (
             <span>{'Nenhuma conta Google vinculada. Clique em "Conectar Google Calendar".'}</span>
@@ -1402,7 +1429,7 @@ if (authLoading) {
         )}
       </section> */}
 
-      {/* <section className="rounded-2xl bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">PayPal</h2>
@@ -1431,7 +1458,12 @@ if (authLoading) {
             <div className="flex flex-col gap-1">
               <strong className="text-emerald-700">Conta PayPal conectada</strong>
               {paypalConnection.email && <span>Conta: {paypalConnection.email}</span>}
-              {paypalConnection.merchantId && <span>Merchant ID: {paypalConnection.merchantId}</span>}
+              {paypalConnection.merchantId && (
+                <span>Merchant ID: {paypalConnection.merchantId}</span>
+              )}
+              {paypalConnection.payerId && (
+                <span>ID da conta PayPal: {paypalConnection.payerId}</span>
+              )}
               {paypalConnection.expiresAt && (
                 <span>
                   Token expira em:{' '}
@@ -1460,12 +1492,52 @@ if (authLoading) {
           )}
         </div>
 
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <h3 className="text-base font-semibold text-slate-900">Conectar usando client_id/secret</h3>
+          <p className="text-sm text-gray-500">
+            Utilize as credenciais do aplicativo PayPal do cliente para armazenar o token diretamente no CRM.
+          </p>
+          <form onSubmit={handleManualPaypalConnect} className="mt-3 space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Client ID</label>
+              <input
+                value={manualClientId}
+                onChange={(event) => setManualClientId(event.target.value)}
+                placeholder="Client ID"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Client Secret</label>
+              <input
+                type="password"
+                value={manualClientSecret}
+                onChange={(event) => setManualClientSecret(event.target.value)}
+                placeholder="Client Secret"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+            {manualError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                {manualError}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={isManualLoading}
+              className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              {isManualLoading ? 'Conectando...' : 'Salvar credenciais do PayPal'}
+            </button>
+          </form>
+        </div>
+
         {paypalError && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
             {paypalError}
           </div>
         )}
-      </section> */}
+      </section>
 
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1580,16 +1652,14 @@ if (authLoading) {
               return (
                 <div
                   key={instance.instanceId}
-                  className={`rounded-xl border bg-white p-4 shadow-sm transition ${
-                    isSelected ? 'border-primary shadow-md' : 'border-gray-200'
-                  }`}
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-4 text-sm shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-base font-semibold text-slate-900">
                         {instance.name ?? instance.instanceId}
                       </h3>
-                      <p className="mt-1 text-xs text-gray-400 break-all">{instance.instanceId}</p>
+                      <p className="mt-1 text-xs text-gray-500 break-all">{instance.instanceId}</p>
                     </div>
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${statusBadgeClass}`}
@@ -1598,7 +1668,7 @@ if (authLoading) {
                     </span>
                   </div>
 
-                  <div className="mt-3 space-y-1 text-sm text-gray-600">
+                  <div className="mt-3 space-y-1 text-gray-600">
                     {instance.number && (
                       <p>
                         <span className="font-medium text-gray-700">Numero:</span> {instance.number}

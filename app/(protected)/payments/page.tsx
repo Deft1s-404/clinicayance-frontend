@@ -24,7 +24,7 @@ interface AppointmentsResponse {
 
 const statusOptions: PaymentStatusOption[] = ['PENDING', 'CONFIRMED', 'FAILED', 'REFUNDED'];
 const PAYPAL_PAGE_SIZE = 20;
-const PAYPAL_SYNC_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const PAYPAL_POLLING_INTERVAL_MS = 60 * 1000;
 
 const formatCurrency = (value: number | string) => {
   const amount = Number(value);
@@ -88,16 +88,6 @@ interface PaypalTransactionsResponse {
   };
 }
 
-interface PaypalSyncResult {
-  imported: number;
-  created: number;
-  updated: number;
-  processedPages: number;
-  totalPages: number;
-  startDate: string;
-  endDate: string;
-}
-
 export default function PaymentsPage() {
   const { isAuthorized, loading: authLoading } = useRoleGuard(['ADMIN']);
   const [activeTab, setActiveTab] = useState<'manual' | 'paypal'>('manual');
@@ -106,6 +96,8 @@ export default function PaymentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [total, setTotal] = useState(0);
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -137,18 +129,29 @@ export default function PaymentsPage() {
   });
   const [isPaypalLoading, setIsPaypalLoading] = useState(false);
   const [paypalError, setPaypalError] = useState<string | null>(null);
-  const [isPaypalSyncing, setIsPaypalSyncing] = useState(false);
   const [paypalMessage, setPaypalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
+  const [hasPaypalFetched, setHasPaypalFetched] = useState(false);
 
-  const fetchPayments = async (statusFilter?: string) => {
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
+
+  const fetchPayments = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const params: Record<string, unknown> = { limit: 100 };
-      if (statusFilter) {
-        params.status = statusFilter;
+      if (selectedStatus) {
+        params.status = selectedStatus;
+      }
+      if (searchQuery) {
+        params.search = searchQuery;
       }
       const response = await api.get<PaymentsResponse>('/payments', { params });
       setPayments(response.data.data ?? []);
@@ -174,7 +177,7 @@ export default function PaymentsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [searchQuery, selectedStatus]);
 
   const fetchAppointments = async () => {
     try {
@@ -229,63 +232,58 @@ export default function PaymentsPage() {
         setPaypalTransactions([]);
       } finally {
         setIsPaypalLoading(false);
+        setHasPaypalFetched(true);
       }
     },
     []
   );
 
-  const handlePaypalSync = useCallback(async () => {
-    setPaypalMessage(null);
-    setPaypalError(null);
-    setIsPaypalSyncing(true);
-
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - PAYPAL_SYNC_WINDOW_MS);
-
-    try {
-      const { data } = await api.post<PaypalSyncResult>('/payments/paypal/sync', {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        pageSize: 200,
-        maxPages: 5
-      });
-
-      setPaypalMessage({
-        type: 'success',
-        text: `Sincronizacao concluida. Novos registros: ${data.created}. Atualizados: ${data.updated}.`
-      });
-
-      await fetchPaypalTransactions(1);
-    } catch (e) {
-      console.error(e);
-      setPaypalMessage({
-        type: 'error',
-        text: 'Nao foi possivel sincronizar com o PayPal. Tente novamente.'
-      });
-    } finally {
-      setIsPaypalSyncing(false);
+  useEffect(() => {
+    if (authLoading || !isAuthorized || activeTab !== 'paypal') {
+      return undefined;
     }
-  }, [fetchPaypalTransactions]);
+
+    let isMounted = true;
+    let intervalId: number | null = null;
+
+    const load = async () => {
+      if (!isMounted) {
+        return;
+      }
+
+      await fetchPaypalTransactions(paypalPagination.page);
+    };
+
+    void load();
+
+    intervalId = window.setInterval(() => {
+      void fetchPaypalTransactions(paypalPagination.page);
+    }, PAYPAL_POLLING_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [activeTab, authLoading, fetchPaypalTransactions, isAuthorized, paypalPagination.page]);
 
   useEffect(() => {
-        if (!isAuthorized || authLoading) {
+    if (!isAuthorized || authLoading) {
       return;
     }
 
-    fetchPayments();
+    void fetchPayments();
+  }, [authLoading, fetchPayments, isAuthorized]);
+
+  useEffect(() => {
+    if (!isAuthorized || authLoading) {
+      return;
+    }
+
     fetchAppointments();
     fetchClients('');
   }, [authLoading, fetchClients, isAuthorized]);
-
-  useEffect(() => {
-     if (!isAuthorized || authLoading) {
-      return;
-    }
-
-    if (activeTab === 'paypal' && paypalTransactions.length === 0 && !isPaypalLoading) {
-      void fetchPaypalTransactions(1);
-    }
-  }, [activeTab, authLoading, fetchPaypalTransactions, isAuthorized, isPaypalLoading, paypalTransactions.length]);
 
   useEffect(() => {
     if (!isAuthorized || authLoading) {
@@ -350,7 +348,7 @@ export default function PaymentsPage() {
         await api.post('/payments', payload);
       }
       setIsModalOpen(false);
-      await fetchPayments(selectedStatus);
+      await fetchPayments();
     } catch (e) {
       console.error(e);
       setError('Erro ao salvar pagamento.');
@@ -369,7 +367,7 @@ export default function PaymentsPage() {
       setIsDeletingPayment(true);
       await api.delete(`/payments/${paymentPendingDeletion.id}`);
       setPaymentPendingDeletion(null);
-      await fetchPayments(selectedStatus);
+      await fetchPayments();
     } catch (e) {
       console.error(e);
       setError('Erro ao remover pagamento.');
@@ -385,10 +383,14 @@ export default function PaymentsPage() {
     setPaymentPendingDeletion(null);
   };
 
+  const handleApplyManualFilters = () => {
+    setSearchQuery(searchInput.trim());
+  };
+
   const handleConfirm = async (paymentId: string) => {
     try {
       await api.patch(`/payments/${paymentId}`, { status: 'CONFIRMED' });
-      await fetchPayments(selectedStatus);
+      await fetchPayments();
     } catch (e) {
       console.error(e);
       setError('Nǜo foi poss��vel confirmar o pagamento.');
@@ -469,7 +471,7 @@ export default function PaymentsPage() {
         >
           Pagamentos manuais
         </button>
-        {/* <button
+        <button
           type="button"
           onClick={() => setActiveTab('paypal')}
           className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
@@ -479,36 +481,64 @@ export default function PaymentsPage() {
           }`}
         >
           PayPal
-        </button> */}
+        </button>
       </div>
     </div>
   );
 
   const renderManualContent = () => (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <select
-          value={selectedStatus}
-          onChange={(event) => {
-            const status = event.target.value;
-            setSelectedStatus(status);
-            fetchPayments(status || undefined);
-          }}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none"
-        >
-          <option value="">Todos os status</option>
-          {statusOptions.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <button
           onClick={() => openModal()}
           className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
         >
           Novo pagamento
         </button>
+      </div>
+
+      <div className="grid gap-4 rounded-2xl bg-white p-4 shadow md:grid-cols-4">
+        <label className="text-xs font-semibold uppercase text-gray-500 md:col-span-2">
+          Busca livre
+          <div className="mt-1 flex gap-2">
+            <input
+              type="search"
+              placeholder="Cliente ou contato..."
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleApplyManualFilters();
+                }
+              }}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={handleApplyManualFilters}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
+            >
+              Buscar
+            </button>
+          </div>
+        </label>
+
+        <label className="text-xs font-semibold uppercase text-gray-500">
+          Status
+          <select
+            value={selectedStatus}
+            onChange={(event) => setSelectedStatus(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          >
+            <option value="">Todos os status</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {error && (
@@ -604,19 +634,15 @@ export default function PaymentsPage() {
           >
             Atualizar lista
           </button>
-          <button
-            type="button"
-            onClick={() => void handlePaypalSync()}
-            disabled={isPaypalSyncing}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-300"
-          >
-            {isPaypalSyncing ? 'Sincronizando...' : 'Sincronizar ultimos 7 dias'}
-          </button>
         </div>
         <div className="text-xs text-gray-500">
           Mostrando pagina {paypalPagination.page} de {paypalPagination.totalPages}
         </div>
       </div>
+      <p className="text-xs text-gray-500">
+        Os recebimentos sao conciliados via webhook (n8n). Clique em &quot;Atualizar lista&quot; para
+        recarregar os dados armazenados.
+      </p>
 
       {paypalMessage && (
         <div
@@ -660,7 +686,9 @@ export default function PaymentsPage() {
             ) : paypalTransactions.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-6 py-6 text-center text-gray-500">
-                  Nenhuma transacao PayPal encontrada para o periodo listado.
+                  {hasPaypalFetched
+                    ? 'Nenhuma transacao PayPal encontrada para o periodo listado.'
+                    : 'Clique em "Atualizar lista" para carregar as transacoes PayPal.'}
                 </td>
               </tr>
             ) : (
@@ -927,10 +955,3 @@ export default function PaymentsPage() {
     </div>
   );
 }
-
-
-
-
-
-
-

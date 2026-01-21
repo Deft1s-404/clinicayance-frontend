@@ -4,11 +4,15 @@
 
 :root {
   color-scheme: light;
+  --color-primary: #d4a44f;
+  --color-primary-dark: #b8832f;
+  --color-primary-light: #f0d8a3;
 }
 
 body {
   @apply bg-gray-50 text-slate-950;
   font-family: 'Sitka Text', Georgia, 'Times New Roman', serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 a {
@@ -23,5 +27,55 @@ a {
   select option {
     font-family: 'Sitka Text', Georgia, 'Times New Roman', serif;
   }
+}
+
+html.theme-dark {
+  color-scheme: dark;
+  --color-primary: #d4a44f;
+  --color-primary-dark: #b8832f;
+  --color-primary-light: #f0d8a3;
+}
+
+html.theme-dark body {
+  background-color: #050a17;
+  color: #f8fafc;
+  filter: invert(0.92) hue-rotate(180deg);
+}
+
+html.theme-dark body img,
+html.theme-dark body picture,
+html.theme-dark body video,
+html.theme-dark body iframe,
+html.theme-dark body canvas,
+html.theme-dark body .preserve-theme-colors {
+  filter: invert(0.92) hue-rotate(180deg);
+}
+
+html.theme-dark body .text-primary,
+html.theme-dark body .bg-primary,
+html.theme-dark body .border-primary,
+html.theme-dark body .hover\:bg-primary:hover,
+html.theme-dark body .hover\:text-primary:hover {
+  filter: invert(0.92) hue-rotate(180deg);
+}
+
+.text-primary {
+  color: var(--color-primary) !important;
+}
+
+.bg-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.border-primary {
+  border-color: var(--color-primary) !important;
+}
+
+.hover\:bg-primary:hover {
+  background-color: var(--color-primary) !important;
+}
+
+.hover\:text-primary:hover {
+  color: var(--color-primary) !important;
 }
 

@@ -7,9 +7,9 @@ const config: Config = {
       colors: {
         // Atualiza paleta primária para o dourado da marca
         primary: {
-          DEFAULT: '#d4b26e',
-          dark: '#b8924a',
-          light: '#ead9ae'
+          DEFAULT: '#d4a44f',
+          dark: '#b8832f',
+          light: '#f0d8a3'
         },
         slate: {
           950: '#0f172a'

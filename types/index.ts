@@ -4,6 +4,8 @@ export interface User {
   email: string;
   role: string;
   apiKey?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Client {
@@ -23,6 +25,13 @@ export interface Client {
   birthDate?: string | null;
   language?: string | null;
   anamnesisResponses?: Record<string, unknown> | null;
+  beforeAfterPhotos?: TreatmentImage[] | null;
+}
+
+export interface TreatmentImage {
+  id: string;
+  url: string;
+  uploadedAt: string;
 }
 
 export interface Aluno {
@@ -32,6 +41,8 @@ export interface Aluno {
   pais?: string | null;
   email?: string | null;
   profissao?: string | null;
+  curso?: string | null;
+  pagamentoOk: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,10 +71,15 @@ export interface Lead {
   createdAt: string;
 }
 
+export type AppointmentType = 'IN_PERSON' | 'ONLINE';
+
 export interface Appointment {
   id: string;
   clientId: string;
   procedure: string;
+  country?: string | null;
+  type: AppointmentType;
+  meetingLink?: string | null;
   start: string;
   end: string;
   status: string;
@@ -71,6 +87,7 @@ export interface Appointment {
     id: string;
     name: string;
     email?: string | null;
+    phone?: string | null;
   };
 }
 
@@ -128,4 +145,71 @@ export interface RevenueReport {
 export interface AppointmentsReport {
   byStatus: Record<string, number>;
   byWeek: RevenueSeriesItem[];
+}
+
+export type CalendarEntryType = 'AVAILABLE' | 'TRAVEL' | 'BLOCKED';
+
+export interface CalendarEntry {
+  id: string;
+  title: string;
+  description?: string | null;
+  type: CalendarEntryType;
+  start: string;
+  end: string;
+  allDay: boolean;
+  timezone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  location?: string | null;
+  notes?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WaitlistEntry {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  desiredCourse?: string | null;
+  country?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceOffering {
+  id: string;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  country?: string | null;
+  currency: string;
+  price: number;
+  durationMinutes?: number | null;
+  notes?: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type KnowledgeEntryStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+export interface KnowledgeEntry {
+  id: string;
+  title: string;
+  slug?: string | null;
+  summary?: string | null;
+  content: string;
+  tags: string[];
+  category?: string | null;
+  audience?: string | null;
+  language?: string | null;
+  status: KnowledgeEntryStatus;
+  priority: number;
+  sourceUrl?: string | null;
+  metadata?: Record<string, unknown> | null;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

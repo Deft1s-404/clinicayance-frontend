@@ -3,11 +3,15 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { ChangeEvent, useMemo, useState } from 'react';
 import clsx from 'clsx';
 
 import { Loading } from './Loading';
+import { Modal } from './Modal';
 import { useAuth } from '../hooks/useAuth';
+import { useSettings } from '../hooks/useSettings';
+import { useTranslations } from '../hooks/useTranslations';
+import type { TranslationKey } from '../lib/i18n';
 
 type IconName =
   | 'dashboard'
@@ -17,21 +21,28 @@ type IconName =
   | 'card'
   | 'megaphone'
   | 'puzzle'
-  | 'chart';
+  | 'chart'
+  | 'book'
+  | 'settings';
 
-type LinkItem = { href: string; label: string; icon: IconName };
+type LinkItem = { href: string; labelKey: TranslationKey; icon: IconName };
 
 const links: LinkItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-  { href: '/clients', label: 'Clientes', icon: 'users' },
-  { href: '/alunos', label: 'Alunos', icon: 'users' },
-  { href: '/leads', label: 'Leads', icon: 'funnel' },
-  { href: '/course-leads', label: 'Leads Curso', icon: 'funnel' },
-  { href: '/appointments', label: 'Consultas', icon: 'calendar' },
-  { href: '/payments', label: 'Pagamentos', icon: 'card' },
-  { href: '/campaigns', label: 'Campanhas', icon: 'megaphone' },
-  { href: '/integrations', label: 'Integrações', icon: 'puzzle' },
-  { href: '/reports', label: 'Relatórios', icon: 'chart' }
+  { href: '/dashboard', labelKey: 'navDashboard', icon: 'dashboard' },
+  { href: '/clients', labelKey: 'navClients', icon: 'users' },
+  { href: '/alunos', labelKey: 'navAlunos', icon: 'users' },
+  { href: '/leads', labelKey: 'navLeads', icon: 'funnel' },
+  { href: '/course-leads', labelKey: 'navCourseLeads', icon: 'funnel' },
+  { href: '/waitlist', labelKey: 'navWaitlist', icon: 'users' },
+  { href: '/appointments', labelKey: 'navAppointments', icon: 'calendar' },
+  { href: '/calendar', labelKey: 'navCalendar', icon: 'calendar' },
+  { href: '/knowledge', labelKey: 'navKnowledge', icon: 'book' },
+  { href: '/services', labelKey: 'navServices', icon: 'chart' },
+  { href: '/payments', labelKey: 'navPayments', icon: 'card' },
+  { href: '/campaigns', labelKey: 'navCampaigns', icon: 'megaphone' },
+  { href: '/integrations', labelKey: 'navIntegrations', icon: 'puzzle' },
+  { href: '/users', labelKey: 'navUsers', icon: 'users' },
+  { href: '/reports', labelKey: 'navReports', icon: 'chart' }
 ];
 
 function Icon({ name, className }: { name: IconName; className?: string }) {
@@ -104,6 +115,21 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
           <path d="M4 20V6M10 20V10M16 20v-7M21 20H3" />
         </svg>
       );
+    case 'book':
+      return (
+        <svg {...common}>
+          <path d="M4 4h12a3 3 0 0 1 3 3v13H7a3 3 0 0 0-3 3V4z" />
+          <path d="M4 17h15" />
+          <path d="M9 7h6" />
+        </svg>
+      );
+    case 'settings':
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -112,16 +138,28 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
 export const Navbar = () => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { language, setLanguage, toggleLanguage, theme, toggleTheme } = useSettings();
+  const { t } = useTranslations();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-const navigationLinks = useMemo(() => {
-    if (user?.role !== 'ADMIN') {
-      return links.filter((link) => link.href !== '/payments' && link.href !== '/integrations');
+  const normalizedRole = user?.role?.toUpperCase();
+  const navigationLinks = useMemo(() => {
+    if (normalizedRole !== 'ADMIN') {
+      const restricted = new Set(['/payments', '/integrations', '/users']);
+      return links.filter((link) => !restricted.has(link.href));
     }
 
     return links;
-  }, [user?.role]);
+  }, [normalizedRole]);
+
+  const handleOpenSettings = () => setIsSettingsOpen(true);
+  const handleCloseSettings = () => setIsSettingsOpen(false);
+  const handleLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setLanguage(event.target.value === 'es' ? 'es' : 'pt-BR');
+  };
+  const isDarkMode = theme === 'dark';
 
   const handleLogout = () => {
     if (isLoggingOut) return;
@@ -145,10 +183,16 @@ const navigationLinks = useMemo(() => {
           <span className="mt-1.5 block h-0.5 w-5 bg-current"></span>
         </button>
         <div className="flex items-center gap-2">
-          <Image src="/image.png" alt="Marca Clínica Yance" width={28} height={28} />
-          <span className="text-base font-semibold text-primary">Clínica Yance</span>
+          <Image src="/image.png" alt="Marca Clí­nica Yance" width={28} height={28} />
+          <span className="text-base font-semibold text-primary">Clí­nica Yance</span>
         </div>
-        <div className="w-7" />
+        <button
+          aria-label="Abrir configuracoes"
+          onClick={handleOpenSettings}
+          className="rounded-md p-2 text-gray-600 hover:bg-gray-100"
+        >
+          <Icon name="settings" className="h-5 w-5" />
+        </button>
       </header>
 
       {/* Mobile drawer */}
@@ -161,14 +205,14 @@ const navigationLinks = useMemo(() => {
           )}
         >
           <div className="flex items-center gap-3 px-5 py-4">
-            <Image src="/image.png" alt="Marca Clínica Yance" width={32} height={32} />
-            <span className="text-lg font-semibold text-primary">Clínica Yance</span>
+            <Image src="/image.png" alt="Marca ClÃ­nica Yance" width={32} height={32} />
+            <span className="text-lg font-semibold text-primary">Clí­nica Yance</span>
             <button
               aria-label="Fechar menu"
               onClick={() => setMobileOpen(false)}
               className="ml-auto rounded-md p-2 text-gray-600 hover:bg-gray-100"
             >
-              ✕
+              âœ•
             </button>
           </div>
 
@@ -187,7 +231,7 @@ const navigationLinks = useMemo(() => {
               >
                 <span className="flex items-center gap-3">
                   <Icon name={link.icon} className="h-5 w-5" />
-                  <span>{link.label}</span>
+                  <span>{t(link.labelKey)}</span>
                 </span>
               </Link>
             ))}
@@ -198,26 +242,35 @@ const navigationLinks = useMemo(() => {
               <p className="font-semibold text-gray-700">{user?.name}</p>
               <p className="text-gray-400">{user?.email}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className={clsx(
-                'w-full rounded-lg border border-primary px-3 py-2 text-xs font-semibold transition',
-                isLoggingOut
-                  ? 'cursor-not-allowed border-gray-300 bg-gray-200 text-gray-400'
-                  : 'text-primary hover:bg-primary hover:text-white'
-              )}
-            >
-              {isLoggingOut ? 'Saindo...' : 'Sair'}
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleOpenSettings}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
+              >
+                {t('actionConfigure')}
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className={clsx(
+                  'w-full rounded-lg border border-primary px-3 py-2 text-xs font-semibold transition',
+                  isLoggingOut
+                    ? 'cursor-not-allowed border-gray-300 bg-gray-200 text-gray-400'
+                    : 'text-primary hover:bg-primary hover:text-white'
+                )}
+              >
+                {isLoggingOut ? t('actionLoggingOut') : t('actionLogout')}
+              </button>
+            </div>
           </div>
         </aside>
       </div>
 
       <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:flex-col w-64 shrink-0 border-r bg-white">
         <div className="flex items-center gap-3 px-5 py-4">
-          <Image src="/image.png" alt="Marca Clínica Yance" width={36} height={36} />
-          <span className="text-lg font-semibold text-primary">Clínica Yance</span>
+          <Image src="/image.png" alt="Marca Clí­nica Yance" width={36} height={36} />
+          <span className="text-lg font-semibold text-primary">Clí­nica Yance</span>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-2 text-sm text-gray-700">
@@ -234,7 +287,7 @@ const navigationLinks = useMemo(() => {
             >
               <span className="flex items-center gap-3">
                 <Icon name={link.icon} className="h-5 w-5" />
-                <span>{link.label}</span>
+                <span>{t(link.labelKey)}</span>
               </span>
             </Link>
           ))}
@@ -245,18 +298,27 @@ const navigationLinks = useMemo(() => {
             <p className="font-semibold text-gray-700">{user?.name}</p>
             <p className="text-gray-400">{user?.email}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className={clsx(
-              'w-full rounded-lg border border-primary px-3 py-2 text-xs font-semibold transition',
-              isLoggingOut
-                ? 'cursor-not-allowed border-gray-300 bg-gray-200 text-gray-400'
-                : 'text-primary hover:bg-primary hover:text-white'
-            )}
-          >
-            {isLoggingOut ? 'Saindo...' : 'Sair'}
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={handleOpenSettings}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100"
+            >
+              Configuracoes
+            </button>
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className={clsx(
+                'w-full rounded-lg border border-primary px-3 py-2 text-xs font-semibold transition',
+                isLoggingOut
+                  ? 'cursor-not-allowed border-gray-300 bg-gray-200 text-gray-400'
+                  : 'text-primary hover:bg-primary hover:text-white'
+              )}
+            >
+              {isLoggingOut ? t('actionLoggingOut') : t('actionLogout')}
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -265,6 +327,65 @@ const navigationLinks = useMemo(() => {
           <Loading />
         </div>
       )}
+
+      <Modal title={t('settingsTitle')} isOpen={isSettingsOpen} onClose={handleCloseSettings}>
+        <div className="space-y-6">
+          <section className="space-y-2">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">{t('settingsLanguageTitle')}</p>
+              <p className="text-xs text-gray-500">{t('settingsLanguageDescription')}</p>
+            </div>
+            <select
+              value={language}
+              onChange={handleLanguageChange}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            >
+              <option value="pt-BR">{t('selectLanguagePt')}</option>
+              <option value="es">{t('selectLanguageEs')}</option>
+            </select>
+            <button
+              type="button"
+              onClick={toggleLanguage}
+              className="text-xs font-semibold text-primary underline-offset-2 hover:underline"
+            >
+              {t('settingsLanguageToggle')}
+            </button>
+          </section>
+
+          <section className="space-y-2">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">{t('settingsThemeTitle')}</p>
+              <p className="text-xs text-gray-500">{t('settingsThemeDescription')}</p>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {isDarkMode ? t('settingsThemeActive') : t('settingsThemeInactive')}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {isDarkMode ? t('settingsThemeStatusDark') : t('settingsThemeStatusLight')}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-pressed={isDarkMode}
+                onClick={toggleTheme}
+                className={clsx(
+                  'relative inline-flex h-6 w-12 items-center rounded-full transition',
+                  isDarkMode ? 'bg-primary' : 'bg-gray-300'
+                )}
+              >
+                <span
+                  className={clsx(
+                    'inline-block h-5 w-5 transform rounded-full bg-white transition',
+                    isDarkMode ? 'translate-x-6' : 'translate-x-1'
+                  )}
+                />
+              </button>
+            </div>
+          </section>
+        </div>
+      </Modal>
     </>
   );
 };
